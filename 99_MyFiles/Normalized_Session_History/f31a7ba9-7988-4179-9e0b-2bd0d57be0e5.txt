@@ -1,0 +1,777 @@
+═══ Vincent ═══
+
+我想写一篇文章发在 GitHub 上。这篇文章可以比较简短，主要是关于当前 LLM Wiki 的 Capacity 实践路径的一个实际部署案例分享。我想介绍一下，Capacity 的核心思路是“稀疏索引”，即通过一个 index.md 文件统管所有文件。Claude 每次在查询知识时，会直接读取一遍这个索引文件，再决定下一步读取哪些具体内容。
+
+在此基础上，我针对该方法提出了我自己的一个工作流. 我在文件夹设计上，除了必要的组件以外，会有一个文件夹叫作 The Dump。这个 Dump 文件夹的功能是：我可以把各种各样的文稿和文件全部一股脑地扔进去，依靠 Orchestrator 的路由逻辑对 Dump 里的文件进行分类，并分发给对应的 Agents 去进行处理。
+
+在处理的同时，Archive Agent 会对这些文件内的信息进行归档，并存入本地知识库。我目前有三个正在每天工作的、用这种工作方式运行的系统：
+
+1.  **Horses**
+    这个系统帮我管理马匹的进出口生意。我可以把包括但不限于账单、账本、法务信息、合同以及为 Marketing 拍摄的素材放入 Dump 里面。经过路由分发后，除了分给相应的 Agents 去进行自动化处理、入账、在 PL 里挂代理、归档和同步新的账务报表以外，我对于不同马的不同认识、不同人的档案、我跟各种人接触时形成的判断、不同人相处的风格，以及我新去的地方和新比的赛，都会在我的本地知识库里面形成。
+
+2.  **小说写作 Project**NovelOS
+    第二个工作流是一个跨越了很多年的小说写作 Project，兼有游戏设计的部分。在最原始的时候，这个 Project 是依托于我自己产生的，已经进行了许多年。在游戏开发早期，我需要自己撰写大量的剧本、稿件、世界观设计，并人为地对这些文本进行归档、整理、改写、续写、调整等。
+    新的系统搭建好以后，我把所有原始文稿，包括新产生的写作（有些可能跨越了很多不同的方面，有些是确定内容的写作，有些只是给自己的一些笔记，有些是预设的伏笔），都可以扔到 Dump 文件夹里面。然后 AI 会 Crunch through 形成一个本地知识库。它会知道哪些文稿是悬而未决的设定，哪些是已经确定使用的设定，哪些是废案。这些都会是一个动态增强的过程。
+    在这个科幻小说里，设计了巨量的新概念和巨量的复杂机制，它又要跟游戏里的互动方式产生关联，要有单独的设计。还会有很多设计内容是当下有了一些想法，但不知道具体怎么做出来，要留到以后。所以，当我设计到特定内容时，我就可以直接问我的 Chatbot，问它关于某一个东西的设计是什么样子的。它就会把之前我写过的相关内容从知识库里返还给我，并解释一下大致内容。
+
+3.  **Personal Life System**MeowOS
+    最后还有一个 Personal Life System。它要帮助我做的事情，除了管理我一天的日程、邮件，以及提醒和督促我去健身以外，还要帮助我协调我在不同 Project 和不同系统上所花的时间和所干的事情。同时，我个人的各种学习、求职和一些生活感悟也会都写在这个里面。
+    这个时候，它要维护的是另外一个单独的知识库。它有能力和权限去访问我所有其他 AI 系统的知识库，并且它的权限最高。它可以调用我所有其他系统里面写的 Skills、Plugins，以及它能够看到其他所有系统里面的东西。而那些子系统是不知道这个更大的 Personal 系统存在的。
+
+这就是三个不同系统的状况两项增强措施，以及一个针对稀疏索引的替换方案：
+
+1. 增强方案一
+2. 增强方案二
+
+这个增强方案一，是通过维护一个 Front Matter 来实现的。这种方式在我现在的这些文稿和系统里面已经非常成熟了。
+
+通过部署 Front Matter，可以直接调用 Obsidian 的 plugin 来直接 browse 这个 Front Matter，从而帮我建立一个动态的联系。我通过在储存知识的时候专门设计了一个 Archive Agent。这个 Archive Agent 可以对 Front Matter 进行更加动态的管理和新字段的生成。
+
+我不需要在穷举过程中预先想出所有的字段，它会在归档的时候，自动把这些字段放入 index.md 文件中。与这个增强方案搭配的是一个在部署搜索逻辑时单独维护的 Query Agent。
+
+这个 Query Agent 在设计上采取了逐级读取的策略：
+
+1. 读取知识库的文件夹结构
+   (a) 该结构在一定程度上是我预先设计的
+   (b) 在 Archive Agent 的普通归档模式下，它仍可以根据需求生成新文件夹或调整既有文件夹
+2. 判定搜索路径
+   (a) Query Agent 会先读取文件夹结构进行判定
+   (b) 如果文件夹结构足以让它判定目标位置，它就会去读取具体的 Markdown 文件
+3. 读取索引与内容
+   (a) 它会读取多个 index.md 文件，用以判定哪些内容是最相关的
+   (b) 接着再去读取每个 Markdown 中具体的关联内容
+
+通过这种方式，当我的 Project 体量足够大时（比如我的小说项目），就能保持高效的检索。我之所以采用这种稍微增强一点的 Index 方法，主要是因为我的小说项目（Project）中，仅各种知识库里现存的 Markdown 文件数量就已经有数百个了。
+
+与此同时，由于这属于一个相对严谨的游戏/文学创作内容，我在要求系统查询时有以下核心需求：
+
+1. 信息的完整性与准确性
+   我需要的是完整的文段，无法接受 Output 查询信息时出现内容被掐断，或者概述不准确的情况。
+
+2. 规避传统 RAG 系统的局限
+   部署一个 RAG 系统不太能支持我的特殊需求。因为在这种创作环境下，文字的产出和观念的变动频率极高，我不可能每写一篇新稿子，就从头到尾重新去维护一遍 RAG 的向量 Embedding。
+
+3. 解决原始 Wiki 思路带来的压力
+   如果直接沿用原始的 Wiki 思路，需要读取的 Index 文稿会过于漫长，字数过多。这会导致 Index 文档本身因为类目过于繁杂，变成一个人类无法通过人力去纠错、验证或修改维护的负担，这在现实中是不切实际的。
+
+所以我采用了这样一种增强式的搜索策略，不仅减少了阅读 Index 时的 Token 使用，进一步缩短了搜索所需的时间，还在一定程度上提升了搜索的准确性。NovelOS 和 Horses 还同时用到的第二个增强，就是对于 FrontMatter 的进一步运用，这在 QueryAgent 上也会得到额外体现。
+
+在设计 QueryAgent 和知识库结构时，我很 deliberately 地对我整个 FrontMatter 字段进行了筛选。只有在我能想象到的使用 Case，以及想象不到但合理的使用 Case 下会需要的字段，才会进入 FrontMatter。
+
+那么 AI 在进行 Query 阅读时，并不会平白无故地一股脑读完所有的 FrontMatter 和正文，而是会进行逐级阅读：
+1. 先去阅读文件夹结构，然后判断 Index。
+2. 判断哪些 Index 是需要去读的。
+3. 读完 Index 后，找到需要读取的材料，再去读材料的 FrontMatter。
+
+在阅读 FrontMatter 的过程中，如果涉及到了相关字段，那么这篇文稿就一定要读。如果发现涉及到的这些字段跟我要查询的东西几乎没有任何关联，此时 AI 的策略是不再阅读这篇文稿的正文，而是直接把该文稿的 FrontMatter 字段、标题以及位置返还给我。
+
+在输出其他内容的同时，AI 会让我判定一下是否需要阅读这一份文档。对我而言，这并不麻烦，因为通常只有一两份文档需要我人力判定，我可以直接点开手动确认该文档是否是我需要的内容。
+
+按照我目前的维护状况，这套系统已经部署了多个月，我大概只遇到过两次它无法确定文档是否与搜索内容强相关、需要我手动判定的情况。另外一种增强的方法，是通过一个 manifest 来进行处理。这主要运用在我个人日常工作的 Mail System 中。
+
+这个系统与我另外两个系统（小说世界观设计、游戏世界观设计）在搜索需求上有明显的区别：
+1. 后两者无论是处理设计文档还是马匹业务（Business）时，对 Query 的需求都是高精确性、高正确率（High Accuracy）。返回的内容不能出错，且通常需要全面且深入的信息。
+2. 而我个人的这个系统，性质更接近于生活层面的 Project Management。它的主要意义不是精准操作，而是帮助我协调日程、处理待办事项并起到督促作用。它承担的是一种“认知负荷转移”的职能。
+
+因此，我对这个系统的 Query 精度要求并不高，可以接受相对粗略的搜索结果。此外，在该系统中：
+* 同一时期持续运作的 Project 数量是有上限的。
+* 每个 Project 下需要进行的知识库（Knowledge Base）或知识域拆分，其层级和维度也是有限的，不需要无限拆分。
+* 从 Project Management 的视角来看，它只需要被拆解成几个小的关键点。
+
+基于此，我采取的 Manifest 方式如下：
+1. 将所有的 Initiative 及其下属维度 breakdown 成一个个集群（Cluster）。
+2. 为每个集群生成一个由 Claude 自动生成并维护的 Manifest 压缩版摘要。
+3. 检索时，Claude 只需要阅读这些 Manifest，就能返还初级信息，告知我需要寻找的内容大致是什么样的。
+
+在这之上，如果仍有必要进一步搜索，由于我在 Manifest 的基础上同样维护了 FrontMatter 和文件夹结构，系统可以继续采用分级搜索的方式，去读取 Cluster Manifest 覆盖的具体文件。
+
+这种策略不需要读完所有文件。它会先扫描一圈文件夹结构和文件名，而这些结构大致是由我自己设置的。因此在可预见的未来，它大体上都符合我的认知结构和需求，我不需要实时地去校验它。
+3. 稀疏索引的替换方案
+
+═══ 凌喵 ═══
+
+凌喵来了，Vincent～
+
+内容看完了。结构很清晰，但有个缺口需要你补充——文末出现了这个标题：
+
+> **3. 稀疏索引的替换方案**
+
+之后没有正文。这一节的内容是什么？是你还没写、还是打算让我帮你拟？
+
+---
+
+在等你回复的同时，我理解目前文章的完整架构应该是：
+
+| 章节 | 内容 |
+|------|------|
+| 核心思路 | 稀疏索引 + Dump 文件夹工作流 |
+| 三个系统 | Horses / NovelOS / MeowOS |
+| 增强方案一 | FrontMatter + Archive Agent 动态管理 |
+| 增强方案二 | QueryAgent 逐级读取（FrontMatter 过滤） |
+| Manifest 方案 | 用于 MeowOS 的轻量 Cluster 摘要检索 |
+| **待补充** | 稀疏索引的替换方案（Section 3）|
+
+另外有几个问题帮我确认一下，方便写出合适的文章：
+
+1. **目标读者**：偏技术（了解 LLM/RAG 的开发者），还是偏通用（对 AI 工作流感兴趣的人）？
+2. **语言**：英文还是中文？还是中英双语？
+3. **Section 3 的替换方案**：是指用 Manifest + 文件夹结构完全替代原始 index.md 的逻辑，还是你另有设计？
+
+═══ Vincent ═══
+
+这个替代方案就是 Manifest 的方案.目标读者偏通用，但这些通用的人是懂技术的。
+
+我的语言要是英语。If you need more information, I can send you the root folders for these projects.
+
+I think the folder structure within these root folders—including the document settings (the front matter)—is something I need to carefully consider, or rather, something I want to focus on introducing.
+
+═══ 凌喵 ═══
+
+Got it. The structure is now fully clear to me:
+
+1. Core concept — sparse indexing via `index.md`
+2. The Dump + routing workflow
+3. Three live systems — Horses, NovelOS, MeowOS
+4. Enhancement 1 — FrontMatter + Archive Agent
+5. Enhancement 2 — Hierarchical FrontMatter reading in QueryAgent
+6. Sparse indexing replacement — Manifest-based cluster summaries
+
+Yes, please share the folder structures. For a technically-minded audience, the actual directory layout and a sample FrontMatter block will be the most valuable part of this article — abstract descriptions of "hierarchical search" land differently when readers can see the concrete structure that makes it work.
+
+If you can share:
+- Root folder tree for one or two of the systems (even partial)
+- One sample FrontMatter from an archived document
+
+That's all I need to write the full draft.
+
+═══ Vincent ═══
+
+D:\Ai_Project\NovelOS\Project_Vertical  这个是小说.D:\Ai_Project\Horsys  这个是horsys. 另外MeowOS就是当前咱们这个系统. 然后我希望在我们这篇文章里面，关于我个人的信息不要放太多。
+
+具体怎么算太多，你可以先写出来。我们可以先聊一下大纲，聊完大纲以后，我们再一个 section 一个 section 地聊。你来向我提问题，我来回应。
+
+在这个过程中，如果产生了一些我不希望被放进去的细节，我会直接跟你讲。先不要着急直接写作，我们先把东西聊出来。
+
+═══ 凌喵 ═══
+
+Good. I can see the full structure now. A few things stand out:
+
+**NovelOS:** `01_Raw/00_Dump` is the Dump; `02_Knowledge` is the KB with a semantic hierarchy (`01_World → 01_Natural / 02_History / 03_Society`, `03_Characters`, `05_Plot`). The `90_Deprecated` and `90_Pending_Terms` folders are interesting architectural choices.
+
+**Horsys:** `00_Dump/Done` is the Dump; `06_Knowledge` is the KB with entity-typed subfolders (People, Horses, Places, Events, Domain). The horse FrontMatter is a fully structured entity profile — IDs, relationships, financial refs, all there.
+
+Also noticed: `01_Raw/00_Dump/2026-04-07_llm-wiki-novel-system_github.md` — is that a draft you already started for this article?
+
+---
+
+Here's my proposed outline:
+
+**Proposed article structure:**
+
+1. **The Problem** — Why RAG breaks down for high-velocity, high-accuracy knowledge work
+2. **The Foundation: Sparse Indexing** — The LLM Wiki Capacity approach; what index.md does
+3. **The Dump** — Drop-everything ingestion → Orchestrator routing → Agent dispatch → Archive
+4. **Folder Structure as Navigation Layer** — The folder tree isn't just organization; it's the first decision layer for the QueryAgent
+5. **FrontMatter as Queryable Metadata** — Archive Agent generates it; field discipline matters; FrontMatter as a pre-read filter
+6. **Hierarchical Retrieval: The QueryAgent** — Folder → index → FrontMatter → body; what triggers each step; when the human is asked to decide
+7. **The Manifest Alternative** — For lower-precision, project-management contexts; cluster summaries; when to use this vs. the full approach
+8. **Three Domains, One Pattern** — How the same architecture adapts across different knowledge types
+9. **(Optional) Practical Notes** — Tradeoffs, failure modes, what surprised you
+
+---
+
+Before we go section by section, three questions:
+
+1. That file `2026-04-07_llm-wiki-novel-system_github.md` in the Dump — what's in it? Should I read it?
+2. For the FrontMatter section: the horse entity profile is a concrete example that would land well with technical readers. How much of that do you want to show? (registration numbers are fine to anonymize, but the *structure* itself is the valuable part)
+3. For section 8 (Three Domains): how do you want to frame your background? "A horse business, a long-running sci-fi novel project, and a personal life OS" is enough context — or do you want to go more specific somewhere?
+
+═══ Vincent ═══
+
+那个 LLM Wiki Novel System GitHub Markdown 那个不是我现在的 draft，那个是一个给其他东西写作的 draft，不要去读那个东西。然后我的理解是，Manifest 的思路跟 Sparse Indexing 的应用场景不一样。我想知道你是怎么理解这件事的，或者说你怎么看这两者之间的区别？
+
+我把 Karpathy 的那个 LLM Wiki 的链接放进来了，我需要在文章里面引用它。关于以下几个部分：
+1. Practical Notes
+2. Trade-offs
+3. Failure Modes
+4. What Surprised You
+
+这些内容我目前还没有成型，虽然有一些碎片化的想法，但现在脑子比较乱。我希望你能多提一些建议，或者多问我一些问题来启发一下。然后关于你的第二个问题：
+
+1. Registration Number 等具体的身份信息肯定是要匿名化的。
+2. Structure 的部分可以公开，甚至可以展示那些目前还没放进来、但在跟 AI 进行合作 development 时被建议加入的内容，也可以在这里出现。关于具体的背景和 MailOS 的 scope，我可以按照以下逻辑来 frame 我的个人情况：
+
+1. 核心业务与学术研究
+   (a) Equine Import Business：我目前在一个马匹进口贸易公司负责 Operation。
+   (b) 学术研究：我有一个作为历史学者的长期学术研究项目。但由于这是我的学术专业和知识产权，我不会将这一部分的任何内容放上来。
+   (c) 原创创作：我和朋友共同创业，正在开发一个长线运行的科幻小说兼游戏项目（Long-running sci-fi novel / game project）。
+
+2. 个人生活与兼职工作
+   (a) Personal LifeOS：这部分作为背景补充，目前的信息量已经足够。
+   (b) Private Chef：我还在做私厨工作，经常需要管理库存（Inventory）并进行商业预算（Business budgeting）。
+   (c) 教学与稿件：我有一些教学需求（教学生挣外快），并且经常在中文环境下撰写关于教育学和非营利（Nonprofit）实践的稿件。
+   (d) 高管助理：我还需要为 Belmont 母公司的高管处理日常业务，类似于担任他的 PTA。
+
+3. 知识基础（Knowledge Base）的协调
+   这些内容都是 MailOS 需要协调的对象。虽然每个项目看似都有独立的系统，但最终它们都产出于我电脑上的知识基础。
+   (a) 独立系统：马匹业务（Horses）和小说游戏项目拥有独立的 Knowledge Base，因为这两个项目涉及与其他合伙人的协作与共享，独立于我的纯个人空间。
+   (b) 个人系统：其他的项目（如私厨、教学、稿件等）则属于我个人的专业或生活范畴。
+   (c) 合规性限制：为 Belmont的欧洲母公司的 高管处理的业务由于有明确的合规（Compliance）要求，目前完全依靠人力进行读写、设计和代码创作，只对部署的方式进行了探索和设计, 但是不能实际使用.
+
+如果需要的话，后续可以在讨论 MeowOS的范围时，继续引用这些背景来解释它如何协调这些不同的系统。在不同的段落,如果需要插图, 请建议什么样的插图合适. 请在不同的地方建议我其他的潜在观点和思考. 另外,本文全部的MeowOS都要改名LifeOShttps://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
+
+═══ 凌喵 ═══
+
+Good. Read the Karpathy gist. Here's how I understand the distinction:
+
+**Sparse Indexing (Karpathy's index.md):** A navigation layer. The index points to documents — it tells the LLM *where to look*, not *what's there*. The actual answer still lives in the underlying files. You always need a second read.
+
+**Manifest:** A compression layer. The Manifest *is* a pre-digested answer at the cluster level. For many queries, you never need to read the underlying files at all — the Manifest is the final answer. When it's not enough, you can drill down, but that's optional, not mandatory.
+
+So the distinction isn't about precision level — it's about what the index *is for*. Sparse indexing optimizes for discovery; Manifests optimize for lightweight answer retrieval. That's why they suit different domains: NovelOS and Horses require exact retrieval (sparse index → document body), while LifeOS needs approximate awareness (Manifest → done). Is that aligned with how you think about it?
+
+---
+
+Now for the Practical Notes sections. I'll ask you directly rather than guess. Take these one at a time — answer whatever feels clearest first:
+
+**Trade-offs:**
+- When you moved away from flat index.md toward hierarchical folder + FrontMatter, what did you gain that was most noticeable — and what did you give up or add complexity to?
+- Has there been any friction between what the Archive Agent wants to do with folder structure vs. what you'd manually design?
+
+**Failure Modes:**
+- The `90_Pending_Terms` folder in NovelOS is interesting — what ends up there? What does it look like when a document resists categorization?
+- You mentioned only 2 cases where the QueryAgent couldn't decide without you. What were those cases like? Was it a FrontMatter problem, a folder structure problem, or something else?
+- Has the Archive Agent ever generated FrontMatter fields that turned out to be useless, or that cluttered the schema?
+
+**What Surprised You:**
+- Before you ran this for a few months: what did you expect to be the hardest thing to maintain? Did it turn out that way?
+- Has the AI ever proposed a folder, field, or structural change that you hadn't considered — and actually adopted?
+
+---
+
+**Diagram suggestions by section:**
+
+| Section | Suggested diagram |
+|---|---|
+| The Dump | Flowchart: file drops → Orchestrator → agent routing → Archive writes to KB |
+| Hierarchical Retrieval | Decision tree: folder → index → FrontMatter → body → (human checkpoint) |
+| Manifest vs. Sparse Index | Side-by-side comparison table: retrieval pattern, precision, maintenance cost, when to use |
+| System Topology | Three systems + LifeOS as the supervisor layer with access arrows |
+| FrontMatter | Annotated example block (horse entity, anonymized) |
+
+---
+
+**Additional viewpoints worth considering for the article:**
+
+1. **The Dump as a trust mechanism** — the psychological effect of being able to throw anything in without pre-sorting is underrated. Adoption fails when ingestion requires decision-making. The Dump removes that friction entirely.
+
+2. **Token economy as a first-class design constraint** — every architectural choice here (hierarchical folder, FrontMatter filter, Manifest) maps directly to a token cost. This could be made explicit: the design *is* an optimization over token usage at query time.
+
+3. **The folder structure as a shared mental model** — it's not just navigation; it's a communication artifact between you and the AI. When you look at `02_Knowledge/01_World/01_Natural`, that structure encodes your ontology of the project. The AI learns your categories.
+
+4. **Humans as schema designers, not data entry clerks** — the role shift is from "I maintain the wiki" to "I design how the wiki organizes itself." That's a meaningful reframe of what AI assistance looks like in practice.
+
+5. **Graceful degradation** — unlike RAG, this system degrades predictably. If the index is slightly stale, you get slightly stale results; you don't get hallucinated vectors.
+
+---
+
+Two quick confirms before we go section-by-section:
+- LifeOS replaces MeowOS everywhere in the article — confirmed on my end.
+- Is the framing of your background in the article: you're the operator/architect of all three systems, and the personal details serve only to explain *why* the systems have different retrieval requirements?
+
+═══ Vincent ═══
+
+另外,我最近在找工作. 作为一个History (History of Tech), MA from UChicago, 其实很难服众, 很多人get不到做AI的为什么需要humanist.这是一个我想放进去勘误的观点. 回应你说的东西. 你对Sparse indexing和manifest我想表达的区别说的特别好. 另外,名字是Horsys. NovelOS和LifeOS. Trade offs: 我获得的其实是在查找过程中的 token 节省。虽然我并没有很好的数据去支持这一点（没有一个 exact measurement），但我能观察到在做搜索时，token 使用量大约降低了 10% 左右。
+
+因为最终读文件的 token 占用仍然是一致的，而我对于知识库的概念切分得比较碎，所以省下来的 token 主要体现在不需要读取非常长的一段内容上。
+
+虽然 token 的节省并不多，但这套方案真正省却的是我人工维护成本。我自己知道这些知识点在哪儿，当知识库建立起来以后，我在写作时很喜欢做 random walking：
+1. 在没有灵感的时候，我会漫无目的地翻阅知识库
+2. 把那些被 break down 的想法一篇篇翻出来重新看一看
+3. 结合我早先在漫长学习中积累的十几万字思考，把它们当作训练材料这些知识文档的写作风格很贴近我表达时的习惯和状态。虽然不能说一模一样，但它拥有我写作时的某种 flavor，所以阅读体验很舒适。
+
+在这个过程中，我有时会发现其 indexing 的内容与我想表达的意思存在微小区别。毕竟在 summary 的过程中，信息已经被压缩处理到第三次了。
+
+另外，我发现个别知识类目的 query 效果稍差，原因如下：
+1. 涉及特殊设计：尤其是一些涉及到“序轨”（序数的“序”，诡异的“诡”）的设计。
+2. 违反常理：它的一些表象和设计中用到的词汇完全违反常理，与大语言模型的训练数据有很大区别。
+3. 效果折损：在这种情况下，生成的 indexing 效果不够高。
+
+因此，我会通过人工方式调整 index 里的叙述，以增强其准确性和质量。
+
+由于这不是我个人的纯私密项目（Project），我还在与其他伙伴合作。虽然写作风格是我的，但其他人也需要在这里进行搜索、阅读并调用这个知识库。在这样的状况下，人工维护和增强检索效率就非常有意义。
+
+当然，如果这只是一个纯粹自用的项目，只是把知识放进去而不打算再调取，那么人工维护也就没有意义了。但是它的 complexity（复杂度）主要体现在 set up 的阶段。在初始设置的过程中，需要投入非常多的思考。
+
+我几乎是把自己已知的内容拿出了一个小 sample（样本），甚至想把它写在纸上进行组合和处理。我会先判断用什么样的方式最适合进行 breakdown（拆解），同时把这个 sample 的知识扔给 AI 让他也去拆解。
+
+接着，我会对比我们两个人的回应并做出选择，确定最终如何搭建 directory（目录）知识结构，以及如何进行 front matter 的设置。
+
+在这个过程中，我发现 AI 给出的 front matter 建议存在两个问题：
+1. 信息冗余：有些字段在我实际搜索知识的场景中并不会用到，它们并不是我需要的 filter（筛选）信息。
+2. 字段缺失：在另外一些情况下，它会漏掉一些字段，但我一时间也无法察觉具体漏掉了什么。
+
+这正是我在这篇文章中想用一定篇幅去解读的内容，即 Polanyi（波兰尼）所提出的 Tacit Knowledge（默会知识）。当然, 我把我想描述的东西问了另一个session的claude.他是这样跟我说的"这是一个非常好的观察。你描述的现象其实触及了认知科学、知识管理和系统设计中几个经典但角度各异的概念。我给你几个选项，你可以看看哪个最贴合你文章的语境和调性。
+
+**1. Tacit Knowledge Gap（隐性知识鸿沟）**
+
+这是最经典的框架，源自 Michael Polanyi 的名言："We know more than we can tell." 他提出的 **Polanyi's Paradox** 后来被 MIT 经济学家 David Autor 专门用来讨论自动化的边界——很多工作之所以难以自动化，恰恰是因为执行者自己也说不清自己在做什么。你描述的现象是这个悖论在 AI 部署场景中的精确复现。
+
+例子：一个资深编辑在审稿时，会"凭感觉"判断一篇文章的节奏是否对——段落之间的轻重缓急、哪里该留白、哪里该加速。如果你让她写一份 style guide 给 AI，她写出来的规则可能只覆盖了自己实际判断依据的三分之一。剩下的那些她"就是知道"但写不出来。
+
+再比如，一位销售主管在判断一条线索值不值得跟进时，依赖的不只是公司规模和预算这些显性指标，还有邮件里的措辞语气、对方回复的节奏等等。他自己做判断毫无问题，但你让他把这些写成 prompt 给 AI 做 lead scoring，他根本不知道从何说起。
+
+**2. The Articulation Bottleneck（表达瓶颈）**
+
+这个说法把重心放在"瓶颈"上——AI 的能力不是瓶颈，流程设计不是瓶颈，人把自己脑子里的东西"倒出来"的能力才是。它比 tacit knowledge 更具行动指向性，暗示了一个工程问题：如何疏通这个瓶颈。
+
+例子：一个团队想用 AI 自动生成周报。每个人其实都知道自己老板想看什么——哪些事要重点提、哪些一笔带过、坏消息怎么包装。但当你让他们把这些"写作策略"变成 instructions 的时候，大家写出来的都是"请总结本周工作"这种空洞的指令。真正让周报"好用"的那些判断，全卡在了从脑到嘴的那一步。
+
+再比如，一位设计师审视 UI 时，会立刻感知到某个界面"不对劲"，但你问她哪里不对，她可能需要很长时间才能组织出语言——"间距不匀称"只是她最终找到的一个近似描述，真正触发她不适感的可能是一整套视觉节奏的失衡，而这套东西她没有词汇去讲。
+
+**3. The Specification Gap（规格缺口）**
+
+这个概念偏工程和产品视角。它强调的是：在人与 AI 系统之间，存在一个结构性的"规格缺口"——人的真实需求和人能写出来的 specification 之间，天然有一段距离。这个词在软件工程里有传统（requirements engineering 中"用户说不清需求"是个老问题），但放在 AI agent 的语境下获得了新的紧迫性，因为 agent 对 specification 的依赖远比传统软件更重。
+
+例子：一家公司想让 AI agent 处理客服工单的分级。产品经理写了一套清晰的分级规则：P0 是系统宕机、P1 是功能故障、P2 是体验问题。但实际运行中发现 AI 的分级和人工分级总是对不上。原因是，老练的客服在分级时还会考虑"这个客户上周刚投诉过""这个问题虽然小但影响的是付费功能"——这些从来没有被写进规则，因为写规则的人觉得它们"不算规则"，只是"常识"。
+
+再比如你举的知识库例子——推行者在 spec 里写的是"每位员工维护个人决策知识库"，但 spec 里不可能写"请考虑员工会因为担心上级查看而自我审查"。这个顾虑不在任何人的需求文档里，但它真实地决定了产品的成败。
+
+**4. The Legibility Problem（可读化困境）**
+
+这个概念借自 James C. Scott 在 *Seeing Like a State* 中的框架。Scott 说的是，国家为了管理社会，需要把复杂的现实"变得可读"（legible）——简化、量化、标准化。但这个过程必然会丢失大量 local knowledge。AI 部署面临的是同一个困境：要让 AI 接手工作，你就必须把工作"变得可读"，写成 prompt、写成 workflow、写成 knowledge base。但真正让工作运转的那些东西，往往恰恰是抗拒被可读化的。
+
+例子：一家律所想让 AI 辅助合同审查。律师可以把审查要点列成 checklist 给 AI，但资深律师在实际审查中依赖的一个关键能力是"嗅到风险"——比如某个条款的措辞虽然在法律上没问题，但根据这个行业的潜规则，这种写法通常意味着对方在后面某个环节会给你挖坑。这种判断根植于多年的行业浸泡，它本质上就是 illegible 的。
+
+再比如，一个社区运营想用 AI 来辅助内容审核。她可以写出明确的规则：禁止人身攻击、禁止广告。但她日常真正在做的判断远比这微妙——某条评论字面上没有违规，但结合发帖人的历史行为和当前社区氛围，她知道这条评论会引发争吵。这些判断根本没办法被"翻译"成 AI 能执行的规则。
+
+---
+
+我个人的建议是：如果你的文章偏向给从业者看的实操性讨论，**Articulation Bottleneck** 最直觉，读者一看就知道你在说什么；如果你想给这个现象一个更学术、更有分量的锚点，**Tacit Knowledge Gap** 或直接引用 **Polanyi's Paradox** 会让论述更有根基；如果你的文章整体在讨论 AI 系统设计中的结构性问题，**Specification Gap** 的工程感最强。**Legibility Problem** 则适合你想把讨论拉到更宏观的视角——不只是 AI 部署的问题，而是所有试图将人类实践系统化时都会遇到的根本张力。" 另外关于你 trade-offs 里的第二个问题，我目前还没有遇到这样的矛盾。failure modes:然后这个 Pending Terms 是我在输入内容的时候，一定会产生很多很矛盾的东西。有些矛盾是我立竿见影就可以去评定好的，但是也有一些是我可能现在判断不好，我需要挂起。
+
+等于说我需要允许我的知识库结构里出现了一个矛盾的东西。这个矛盾的东西就存在在了这个 Pending Terms 里。它有可能只是一个简单的词汇的叫法，这也是 Pending Terms 这个名字最早的由来。它就是一个非常简单的，我对一个游戏里面的设定，这把剑应该叫什么东西？这个游戏机制应该叫什么名字？我是管它叫魂 Spirit 还是管它叫魂 Soul？就是这样一个东西。
+
+但是慢慢的，它开始成为了我所有可能矛盾的，暂时还没有办法去很好地补充或者判定的一个类目。并且这个矛盾的保存其实非常的有趣。很多矛盾我在处理别的内容，有的时候会处理着处理着又导回了这个矛盾。然后因为我有了新的 context，我有了新的想法，我发现这个矛盾的两个方向都可以走。就是左边的这个矛盾和右边的这个选项，它们两个我都可以发展出很多很多新的东西出来。我就会把它当作两个独立的东西先去发展。反正这个矛盾已经存在，这个矛盾也是挂起的，被明确标出来这是一个 Pending 的东西了。那没关系，我就先写。写着写着就发现我好像有办法把这个矛盾疏通了。可能是这个矛盾转嫁了，也有可能是我补充了一些别的设定，改变了一些早期的写作。但是呢，写出来这个东西其实挺有用的。
+
+我其实很少会遇到 Archive Agent 想做的事情跟我的 Against my will，或者它想做 something I feel very uncomfortable。It rarely happens. Though with that being said，出现过几次它把一些特别早期的文段当作了需要被归档的知识，即便相关的内容已经有新的设计把它给覆盖掉了。
+
+比如说在游戏小说的设计里面，一个例子是教会。我们对于整个宗教系统的运作方式产生过几轮比较大的更新。那么出现过几次相关的更新。相关更新完了以后，不是所有旧的文段都被覆盖掉了。然后导致在查询其他东西的时候，出现了这些旧的文字和旧的知识污染了新的文字和新的知识。它们没有被合适的放到那个 deprecated 废案的那个文件夹里面去。
+
+那么在这个时候，我去人为地搜寻完实际文字产生的一个知识库里面的几个词导致的污染，其实是很困难的。有很多这种描述是蔓延在了很多很多的写作里面。那么这个时候，采用一个 Sparse Index 加上 Query 搜索策略的优点，就比 RAG 数据库的优势要体现出来了。就是在这个过程中，它依赖的是一个 Semantics 语义的近似，而不是一个数学向量的近似。对于这种我已经摘出系统的词汇，它已经在我的向量 database 之外的东西，我就可以用语义的方式来让这个 Cloud Code 或者是 LLM 大模型来去把它 identify 出来。
+
+那么这个时候我需要做的事情就是把所有跟这个废案有关的原始文稿，因为这些是可以找出来的。我在 dump 里面扔的东西被处理完了以后，它会移到一个叫 done，那么在这个里面，dump 里面是所有被封存的原稿。我作为一天里三分之一时间的文字工作者，保持原稿和保持不同版本这个习惯，我觉得还是很重要的(写作的时候这种很有我个人特质的言论可以保留一些)。然后要把原稿放上来，把原稿拿出来，比对着原稿里面已经写好的东西，再去用 Semantics 的搜索重新去搜一遍。就会发现原来在这几封文档里面还会有单独的这样的东西。有些可以靠 AI 的批量去除来去除，有些就可以靠人工的介入和写作来去修正。因为它这个整个知识库和数据库的本质是一个用文件夹储存的结构化的 Markdown 文档库，所以只要数量不要太大，人工纠偏、人工维护的可行性是非常非常高的。这个它不能 decide 的状况，其实并不太出现在结构或架构上的设计，问题是出现在我当时的 front matter 结构里。
+
+当时在 front matter 里面包含的描述词汇和圈定的数量不够多，我还没能很好地维护一个动态的 tag 系统。我当时的 tag 系统缺乏设计，纯粹是 AI 想到什么就填什么。除了动态系统以外，可能在大分类上也有缺失，比如：
+1. 它是属于世界观、开发 notes，还是写作的文稿？
+2. 如果是世界观，它是关于社会、自然，还是角色的？
+3. 它是否涉及到 plot 本身？涉及到哪一个章节或区域？
+4. 它大概是什么进度？有没有 hooks 或伏笔？
+
+诸如此类的结构，在我的设计和个人需求里是非常好用且实用的，但当时我没有对 tag 系统进行良好的维护，以至于产生新 tag 的规则是不存在的。AI 每一次都要纯靠算力来判断要不要给一个新 tag，也没有一个很好的 tag list。
+
+所以，在 sparse indexing 的基础之上，除了 index 以外，我还维护了一个东西叫 tag list。这个 tag list 是 front matter 里的一个基本部分，很多涉及相关关键概念的内容，会通过这种 tag 的方式来呈现。
+
+这个 tag list 的作用如下：
+1. 记录现有的 tag，并用几个词的词组快速解释 tag 内容。
+   (a) 很多 tag 不需要解释，就完全不会有解释。
+   (b) 个别运行不太稳定的 tag，我会留一两句话的解释让 AI 去处理。
+2. 自动精简系统。
+   (a) tag 是 AI 自己生成的，不需要人工维持。
+   (b) 系统会自动判断 tag 是否稳定：如果在多次搜索中都用到了某个 tag，那么该 tag 的描述就会自动被删除，从而让整个系统变得更精简。
+
+这个 tag 的作用是双重的：一重是帮助在 Obsidian 的 plugin 和环境里更好地查看知识图谱；另一重是脱离了 Obsidian，它也可以识别出不同概念之间的关联。这个 tag 的 query 搜索步骤，发生在 Front Matter 被阅读之后。当 AI 在阅读这些 Front Matter 内容时，它会产生一个小规模的选择（selection），判断哪几篇文章或哪几个知识条目需要精读。
+
+在进行精读时，如果这几个知识条目的 tag 具有较高的重合性，或者在几个大方向上体现出明显的倾向性，AI 就可以通过对我的检索习惯以及对系统的了解，来判断是否需要对这些方向进行初步搜索，以获取更多新信息。
+
+这个机制存在的原因是，Sparse Index（稀疏索引）虽然偏重于 Accuracy（准确率），但有时会因为过于准确而导致 Scope（范围）太窄。因此，我需要另一种机制在特定且必要的时刻，适当放宽 Accuracy 并扩大 Scope。当我维护了这样一个 Tag System 后，它就能很好地 Join the loop，成为系统的一部分。Archive Agent 确实生成过很多完全无用（completely useless）的 Front Matter fields。
+
+我在设计这些系统时，一定会通过白板推演（whiteboarding）、在纸笔或文稿上演算以及亲自写作的方式，先有一个初版的 version，然后再让 AI 帮我处理。
+
+我不会把所有的东西都穷举列完，而是只列出几个我认为特别重要的，或者确定不重要的。至于 Spectrum 中间的那部分，我会让 AI 自己补全。
+
+在实际应用中，每当有新种类的知识文件出现，我都会对这些文件保持高度的 active 和 intentional。在与它们互动、使用的过程中，我会每隔一段时间（every now and then）重新查看这些写完的知识卡片（这也是我之前提到的“随机漫步”带来的另一个意外之喜）。
+
+在这个过程中，我会重新审视它的 Front Matter 字段。如果发现某些字段在搜索时完全用不到，或者实际使用中发现并不重要，我就会告诉 AI：这一类知识卡片的这个字段完全可以不要。
+
+我刚才提到的“字段”，指的就是 Front Matter field。通过这种方式，可以避免 Schema 变得过于臃肿（clustered），让 Front Matter 尽量保持精简，从而减少系统的负担。我说实话，在设计这个系统的时候，我以为最困难的部分会是把这个系统搭建出来本身。但实际上，搭建一个这样的系统是非常容易且快速的事情。
+
+我设计第一个系统的时候，作为一个完全没有编程背景，对 AI 的使用也只停留在用 ChatGPT 的聊天框的人，第一次搭建可能用了我几个小时的时间才搞明白什么是什么、什么要怎么弄。但等到涉及到第三个、第四个系统的时候，整个从零开始的搭建用了不到十分钟，并且这十分钟以后它基本上就已经很 work 了。
+
+这归功于在每一次的设计和迭代过程中会产生一个 System Spec 的标准化文档。这个标准化文档的格式和内容也是我经过了很多次迭代产生的。我在设计新系统的时候，可以直接把一个 Specs 的设计规范扔给它，告诉它我需要一个类似于这样的东西。然后我会跟它进行一个标准化的 back and forth 过程，我可以 narrow down 我这个新系统跟前面这个系统的区别或者新系统的功能，然后由它来帮我去生成相关的内容。所以这个是 kind of caught me off guard。
+
+另外一个让我感到意外的是，维护这个成本 surprisingly easy，但是升级和调试这个系统 is surprisingly difficult。这个难点在于，在我的日常使用中，有大量重度的文本输入以及文本与代码的生成。如果我的 Context Management 做得不够好，那么每一天烧的 Token 都会非常非常多。作为一个缺钱的穷学生来讲，每天烧掉几十美元对我来说不是一个可以承担的费用。所以需要想各种各样的方式去优化这个系统的 Token 使用和 Context 使用，然后要被迫培养很多节省 Token 和 Token Context Management 的能力。
+
+这个是我在做之前完全没有想过的，完全没有想过做这个东西在 R&D 阶段会花这么多钱。我到目前为止，把这几个系统从零到有搭起来，试错，以及从不会做 Context Management 到现在这个状况，可能已经烧了大几百块钱。直到差不多三月初的时候，才算是比较稳定地维持在了一个月可能有个小几十块钱的状况。
+
+实际上，经过优化以后，在有些系统的处理上，比如 Horses 和 NovelOS，它们的 Context 和费用的节省是数千倍的节省。但在比如 MailOS，I mean LiveOS，或者是其他一些小的部署里面，它的费用节省其实就没有特别高。与此同时，因为我整个的系统规模和它覆盖我生活部分的规模在扩大，所以实际上费用的节省没有几千倍听起来那么吓人，恰恰是因为它的单次搜索、检索和整理的成本下降了几千倍，所以我突然一下可以比较高强度地去使用它了。
+
+我在第一次整个系统能启动的时候，把我前二十几篇最近期的文稿，短则几百字，多则几千字的东西扔给它。那天晚上只是冷启动建成的那个库，差不多就要烧了将近一百多块钱，这个成本实在是太高了。等到后面，每一次的归档可能也就用个几毛钱的时候，就会变得非常 manageable。关于 AI Proposed Folder Field，其实这个 Tag System 的 Tag List 就是 AI 提议让我去维护的。
+
+这个 Tag List 的产生，是因为在初期有大量文档（几十份几十份的旧文档）往里放，导致产生的 Tag 数量过多，在实际使用中会让 Tag 系统变得毫无意义。
+
+我们需要 Tag 系统实现的功能是：
+1. 在搜索完成后，把相近文稿中 Tag 重合率较高的内容也进行搜索。
+2. 在有限的范围内扩大搜索的覆盖面。
+
+但如果 Tag 的数量无休止地增长，且不对旧有 Tag 进行有效复用，这个机制就会失效。
+
+所以维护 Tag List 的核心逻辑如下：
+1. 在 AI 每一次归档并添加新 Tag 之前，都需要与旧有的 Tag List 进行比较。
+2. 如果已存在的旧 Tag 能很好地与当前内容关联，或是有足够的联系，就必须复用过去的 Tag。
+3. 只有当内容确实非常新颖时，才去创建新的 Tag。4. 最后来回应你说的 Additional Viewpoints：
+
+这个 “dump as a trust mechanism” 是一个非常重要的东西。你说得没错，这在设计之初的设计哲学里就已经包含了。但我自己在说的时候，其实有一点 overexcited by the technicality，而忽略了它的 psychological effect 非常明显。
+
+当我不再需要 pre-sorting 我的 knowledge 和 input 的时候，我的认知负荷就可以全部放在产出高质量的思考和思想内容上，去完成原创的、价值判断或价值产出的内容，而不是消耗在机械性的劳动之上。这种认知带宽上的减免，让我的思考质量得到了更好的提升。
+
+我一天需要处理非常多跨越不同类型的事情，如果每一件事都需要去手动区分，我确实没有办法在认知上同时把这么多东西都想明白。所以这个 dump 确实 remove 了这种 friction。
+
+另外还有一点很重要的就是，所有的这一切工作都可以只发生在 Obsidian 或者 VS Code 这一个界面里。我不再需要去切换界面，不再需要在几个浏览器的 tab 或者几个程序中来回跳转。
+
+目前对于整个 Horses 工作流中的 finance 部分，我也完全让它自动化运行了：
+1. 我不再需要自己去打开 Excel 表。
+2. 我可以直接通过查看当前的账务 snapshot，让它给我抓取现有 Excel 表里的数据，直接处理我的账务信息，甚至是报税信息。
+
+这都是因为在最开始设计的时候，已经把脚本和相关的模型设计得足够成熟，把自动化设计得非常完善了，所以我现在不需要再有这么多 human labor 的 input。
+
+确实，在设计阶段需要花很长的时间去 debug，去细细地描述、思考并想办法搞明白自己的需求。你的第二个 viewpoint 是对的，很多思考确实都是出于 token cost 的考虑。而且我觉得这种优化带来的影响，不光在个人身上，在企业部署上也是 applicable 的。
+
+1. 流程的去黑箱化
+   一来，这是一个精简轻量化的系统，它被迫需要变成很多有格式的、以及非常清晰的工作流。
+   在这个过程中，AI 用自己的 raw mental power（模型原生能力）去处理的环节会变少。这意味着思考上和工作流程上的“黑箱”数量会减少。如果某一个环节出问题了，debug 和调整的难度会降低，更容易知道该怎么做以及哪里出了问题。
+
+2. 企业成本管理的逻辑
+   以我个人的高强度使用为例，现在每个月要花几十到几百块钱。假设是一个企业用户，哪怕需求没我这么高，每个月大概也要产生几十块钱的开销。
+   考虑到很多企业员工在习惯上并不会主动去做 Context Optimized 或 Token Optimized，所以对于企业来讲：
+   (a) 在架构和运作原理上去省钱，是 the most a company can do。
+   (b) 剩下的部分，就只能靠员工自己的 good habits 了。
+
+   但这在企业内部会变成一个非常复杂且没必要的决策：我要去判定开一个教学工作坊的有效性是多少？会产生多少 cost？这个成本跟节省下来的 token cost 相比哪个更多？教完以后这些好习惯能保留多久？
+   It's hard to say 到底哪一个更花钱。做这种决策所浪费的时间、精力和企业内部 capacity，是否能够 justify 它省下的那些 token？
+
+3. 输出质量的长期提升
+   Anyway，对于企业部署来讲，还有一个很重要的点是输出质量的提升。
+   因为你的每一个 session 的 context 变得更集中了，而不是一股脑把不需要的东西都扔进去。所以在员工实际使用过程中，这种被优化过的系统和搜寻结构，其产出质量会比没有优化的结构更高。
+
+这种提升并不是立刻立竿见影或感官上的刺激，但它确实会带来长期体验的优化，以及输出效果和质量的持续提升。然后第三点我完全同意：Folder Structure as Shared Mental Model。第四点我也完全同意，但这里有一点我想要强调：我们在设计这个东西的过程中，并不是在“重新发明轮子”。我们既不是在做无用功，也不是在用笨拙的方式闭门造车。
+
+其实在市面上，我已经看到了成熟的工作流和 Skills，可以一键式地产生与我的部署方案高度接近的东西。但它们产生的内容，与最符合我个人需求的那个核心就是不一样，总归差了一点点。
+
+这种“一点点”的差距，往往不是在工具属性或细枝末节的执行端，而是在架构、思想和设计哲学上。这种差距在部署之后，后期想要修正或调整会非常困难，且难以察觉，唯一的体感可能只是“用着不舒服”。
+
+所以我非常认同你提到的第四点：Schema Designers, not Data Entry Clerks。
+
+但我觉得更重要的一点是：
+1. 我们在这个过程中，并不是试图用 AI 代替人，或者将人异化成机器。
+2. 我们所做的，恰恰是尊重、复现并增强人类的努力（Human Efforts/Labor）。
+3. 我们是在增强和尊重那些属于人类的时刻（Human Moments）。
+
+在这个过程中，我们不是被 AI 奴役、被 AI 驯化，变成只会说 “Yes, No, Continue” 的小写的人；我们是大写的人，是 Capital H Human。第五点我也完全同意。但同时我们需要认知的一点是，当这个架构只在数据量比较小的时候才成立。哪怕我现在有十几万字到几十万字的文本总量，这几个系统加起来可能有一个将近一两百万字的 scope，但相对来说，这仍然属于小型 scope。因此，纯靠 Semantic（语义搜索），并通过架构算法和策略上的 Optimization（优化）来进行搜索仍然是可行的。
+
+但我这个东西注定只能是个人或面向个人、小团队的使用。如果把它放到企业环境，或者一个多人长期运作的团队环境中，我这个做法肯定不行。最简单的一些使用场景也会轻而易举地爆 Context（上下文），并且会有太多文件必须去索引。
+
+所以到了企业层面，我觉得一个更 Promising（有前景）的方案是在企业维度上同时维护三类 Knowledge Base（知识库）：
+1. 属于员工个人的个人数据库；
+2. 属于每个单独项目或 Initiative 的 Knowledge Base；
+3. 属于全公司共有的 Knowledge Base。
+
+公司共有的知识库仍然是一个传统的 RAG 系统，或者是某种方式 Augmented（增强）后的 RAG System。在这种状况下，公司的个人及团队可以根据实际需求，从这个大的 RAG System 中 Pull（拉取）自己需要的信息，作为个人或团队数据库的 Initial Input（初始输入）。
+
+同时，这个个人数据库维护的是员工处理问题时的习惯、对人际关系的判断，以及很多 Tacit Knowledge（隐性知识）和那些 Articulated（清晰表述）的 Bottom Lines（底线）记录。
+
+我们在做这件事情时，不是试图用个人数据库去替代企业内的员工（Replacement），而是把很多平时需要依赖猜测、冥冥中的感知，变成了一个企业中的 Individual（个人）可以时刻 Rely on（依赖）的 Rules，一个非常稳定的 Reference。
+
+这个系统会在使用过程中不断学习他的习惯，了解他的偏好，知晓他的判断。而这一切的作用不是为了取代他，而是为了在 AI 系统辅助生成各种内容的过程中，更好地尊重他的需求，更好地尊重他的 Human Preference、他的 Human Being 以及他的 Human Efforts。然后，团队层面的系统与此类似，但它存储的是与团队自身相关（relevant）的内容。每位成员都能从团队数据库中调用各种资源。
+
+这个团队数据库的核心价值在于实现信息对齐（Information Alignment），即对齐“你知道什么”与“你不知道什么”。（关于 Information、Misinformation 以及 Disinformation 的对齐在企业部署中的重要性，我会在单独的一篇稿件中详细阐述，这是基于我实际工作体验的深刻感受。在本篇稿件中，我们不必展开得过于细致，但明确这一点非常重要。）
+
+当一个企业或团队的各项倡议（Initiatives）结束时，流程如下：
+
+1. 个人知识沉淀
+   在工作过程中，Initiatives 中对个人有用的内容已经逐渐写入了个人的数据库。
+
+2. 知识库（Knowledge Base）封存
+   当项目最终结束时，该项目的知识库需要被封存。在封存的同时，完成最后一次更新，将所有内容以向量化的方式嵌入（Embed）到公司全员的 RAG 系统中。
+
+这种做法显著降低了公司维护 RAG 系统的难度（Difficulties）：
+* 改变了过去需要时刻跟随当前项目进度、不停重新计算向量并更新公司 RAG 数据库的繁琐模式。
+* 现在，我们只需在项目的“开始”和“结束”两个时间点进行向量更新即可。
+
+对于公司内任何想要了解该目标（Objective）或项目倡议的人来说，他不再需要从公司浩如烟海的数据中盲目搜寻。他只需要在全局数据中定位到该项目的存在，了解这个以文件系统（File System）为核心的数据库存储位置，然后直接联系项目相关人员获得访问权限（Permission），即可调取该项目的数据库。
+
+═══ 凌喵 ═══
+
+This is enough material to write most of the article. Let me organize what's now mapped:
+
+**Clearly covered:**
+- Trade-offs: ~10% token savings, but the real win is maintenance cost reduction; random walking as unexpected benefit; edge failure on counter-intuitive concepts (vocabulary violations of LLM priors)
+- Failure modes: Pending Terms as contradiction parking lot; deprecated content contamination and semantic vs. vector search advantage; Tag List evolution from AI suggestion; FrontMatter bloat and pruning
+- What surprised you: build speed vs. maintenance difficulty; cold start cost (~$100 first night); R&D burn total hundreds of dollars → now manageable; cost reduction of 1000x on Horsys/NovelOS enabling high-intensity use
+- Dump: cognitive load / single-interface point confirmed
+- Enterprise scaling: three-tier model (personal + initiative + company RAG), initiative-end embed cycle
+- Human framing: Capital H Human, schema designer not data clerk, not reinventing the wheel
+
+---
+
+A few things still need clarification before I can lock the outline:
+
+**1. Tacit Knowledge framing.** Based on everything you've described — especially the FrontMatter setup process — Polanyi's Paradox is the strongest anchor: you *literally* couldn't fully specify your own FrontMatter schema before trying it, because you didn't know what you knew. The Intel white paper you uploaded is titled "Capturing Tacit Knowledge through Generative AI" — do you want to cite it? Their approach (Context Atlas, SME feedback loops) is architecturally different from yours, but the underlying problem they're naming is the same. Worth a contrast.
+
+**2. The humanist angle.** History of Tech, UChicago — how explicit do you want this to be? A first-person framing in the intro ("I came to this from a humanities background, not engineering") would do a lot of work positioning the article. Or keep it implicit?
+
+**3. Enterprise section.** The three-tier model you described is a complete idea in its own right. Do you want it as a closing thought ("this is where I think it scales"), or a full section? You mentioned this connects to a separate piece on information alignment in enterprise — that's a natural stopping point.
+
+**4. Cost numbers.** The $100 cold start, the R&D burn, the eventual stabilization — these are the most vivid data points in the article. Do you want to include actual numbers, or keep it impressionistic ("significant initial cost... now reduced to a manageable monthly amount")?
+
+**5. Length.** What you've given me is material for 3,500–4,500 words minimum, probably more. That's not a short article. Are you okay with a longer piece, or should we cut scope? Candidates for trimming: enterprise section (reference forward to separate article), Practical Notes (condense into one section instead of three), or Three Domains (one detailed example instead of three).
+
+═══ Vincent ═══
+
+我觉得回应你的第一个问题，就是 Taxonomy Framing 的这一部分，可以把它的机制作为一个 contrast（如果我们的文章内篇幅足够，或者它确实 relevant 的话）。我觉得 Humanist Angle，也就是我自己 History of Tech、UChicago 这些背景，如果需要说的话都可以说，这些没有问题。我是谁、我的名字、我的毕业院校、我的专业，这些内容也都可以提及。
+
+但有几类信息是不能说的：
+1. 我生活里正在发生的一些更具体的事情。
+2. 我企业涉及的名字以及我老板的名字。
+3. 我正在设计的具体内容，比如设定上的信息、新的概念，或者我在小说里设计的这些东西。
+
+因为这些内容目前都还没有发表。我觉得这个 Enterprise section 可以作为一个 closing thought，也可以作为一个 full section。甚至如果你觉得把这一段拿掉更好的话，我们可以把它单独开成一个篇目。
+
+在这个事情上我没有任何的 favor 和判断。如果你觉得放，我们就放；如果你觉得不放，我们就不放。Include the actual numbers for the cost.我觉得在这个里面说了很多内容，是可以覆盖很多篇稿子的，我们要把它拆成几篇单独的稿件。我希望在这个 session 里面，最终形成对至少先完成第一篇的 outline, 以及对其他几篇内容，要有足够详实的大致 outline，或者大致观点的 overview。另外我需要格外强调的一点是：
+
+我不希望写一个关于 Karpathy 实践方式的教程文章。我不希望这篇文章的主体是从头重新介绍他的观点，或者从头重新介绍他的东西。我的 assumption 里面，一定是人们已经读过了他的东西，或者知道他在说什么。我的文章在提到他的内容之前，肯定需要给出一个介绍，但这个介绍不应该是我整个文章的主体。
+
+它在我的文章里应该只是作为一种铺垫性的信息，用比较概述性和关键性的方式，覆盖掉基本的工作原理就可以了。我不希望把它变成一个新手教程。
+
+这已经是我第四次 rewind 这个对话，也是我第三个独立开启的 session 了，我不希望你再把这个问题搞错。
+
+═══ 凌喵 ═══
+
+Understood, and I'll state it plainly: Karpathy gets one paragraph. The article assumes the reader already knows his work. Everything after that paragraph is yours.
+
+---
+
+Here's how I'd split the material into articles:
+
+**Article 1 — Core deployment case study** (write first, this session)
+**Article 2 — Tacit Knowledge and AI system design** (theoretical/philosophical; Polanyi, Intel paper as contrast, humanist lens)
+**Article 3 — Token economics and context management** (cost curve, de-blackboxing, enterprise cost logic)
+**Article 4 — Enterprise scaling** (three-tier model, information alignment, RAG at scale)
+
+Articles 2–4 can share content produced in this session. They're each independent.
+
+---
+
+## Article 1 Outline
+
+**Working title:** *Running Three LLM Knowledge Systems Simultaneously: A Practical Architecture*
+
+**Assumed reader:** Already knows Karpathy's LLM Wiki. Technically literate. Has probably tried something like this, or is about to.
+
+---
+
+**1. Introduction** (~150 words)
+- I'm a humanist (History of Tech, UChicago MA) who built and runs three AI knowledge systems daily — a horse import operation, a long-running sci-fi/game project, and a personal life OS
+- The gap this article fills: what it actually looks like to run these in production, past the proof-of-concept stage
+- One sentence reference to Karpathy's pattern as the foundation
+
+**2. One paragraph on sparse indexing** (~100 words)
+- What index.md does: navigation, not content
+- Why it works; where it hits a ceiling when file count scales or when documents resist easy summarization
+- This is the starting point. Everything below is what I added.
+
+*Diagram: folder structure of one system (Horsys or NovelOS, anonymized)*
+
+**3. The Dump** (~300 words)
+- What it is: a zero-decision-required ingestion point
+- Orchestrator reads and routes; Archive Agent writes to KB; processed files move to `Done/`
+- The cognitive load point: when you don't pre-sort, your entire mental bandwidth goes to producing the content, not classifying it
+- Single interface (Obsidian/VS Code) — no tab-switching
+- Brief: Horsys example (bills, contracts, marketing materials all go in; Finance automation handles the rest)
+
+*Diagram: Dump pipeline — file drops → Orchestrator → agent routing → Archive → KB*
+
+**4. Folder Structure as First-Order Navigation** (~250 words)
+- The folder tree is the QueryAgent's first decision layer, not just organization
+- Designing it means externalizing your ontology — you're encoding how you think about the domain
+- Show actual structure (NovelOS anonymized): `02_Knowledge/01_World/01_Natural`, `03_Characters`, `05_Plot`, `90_Deprecated`, `90_Pending_Terms`
+- The `90_Deprecated` and `90_Pending_Terms` folders as deliberate design choices (not leftovers)
+- Folder structure = shared mental model between you and the AI
+
+**5. FrontMatter as Queryable Metadata** (~400 words)
+- Archive Agent generates fields dynamically; you don't enumerate them all upfront
+- This is where Polanyi's Paradox shows up in practice: you cannot fully specify your own schema before using it, because you don't know what you know. The field design process requires iteration against real material. (Brief — one or two sentences invoking Polanyi; not a lecture)
+- Tag List: controlled vocabulary maintained alongside the index; auto-prunes when tags stabilize across multiple searches; prevents unbounded tag proliferation
+- Field discipline: if a field never filters anything, it gets removed. FrontMatter should stay lean.
+- The setup process: whiteboard first, give AI a sample, compare your breakdown vs. AI's breakdown, then decide the schema together
+- AI-proposed fields: some are immediately useless, some are surprisingly good (Tag List was AI-suggested)
+
+*Example: anonymized FrontMatter block from Horsys (entity profile structure without identifying info)*
+
+**6. The QueryAgent: Hierarchical Retrieval** (~350 words)
+- Four-step read: folder structure → relevant index.md(s) → FrontMatter → body
+- FrontMatter as binary filter: if fields don't align, return title + location + FrontMatter summary, ask human to decide
+- In practice: only needed human judgment twice in several months of daily use
+- Tag expansion: after FrontMatter read, if multiple docs share tags with high overlap, consider widening the search scope — a mechanism to trade precision for recall deliberately, only when needed
+- The failure mode this prevents: over-precise indexing that misses context you didn't know you needed
+- Edge case: concepts that violate LLM priors (invented vocabulary, non-intuitive terminology) produce weak index summaries; manual index correction needed for these
+
+*Diagram: decision tree — folder → index → FrontMatter → body → human checkpoint*
+
+**7. The Manifest: A Different Tool for a Different Problem** (~250 words)
+- Sparse indexing is a navigation mechanism: it finds files
+- Manifests are a compression mechanism: they pre-digest cluster-level answers
+- Use case for Manifests: LifeOS, where approximate awareness is sufficient; project management vs. high-accuracy retrieval
+- How it works: initiatives broken into clusters; each cluster has an AI-maintained compressed summary; query reads Manifests first, may never need to read underlying files
+- When to use which: if you need the exact sentence, use sparse index + FrontMatter. If you need to know "roughly where things stand," use Manifests.
+
+*Diagram: side-by-side comparison — Sparse Index vs. Manifest (retrieval pattern, precision, maintenance, use case)*
+
+**8. Practical Notes** (~500 words)
+
+*Trade-offs:*
+- Token savings are real but modest (~10%); the actual savings come from not reading unnecessarily long index documents
+- The bigger win is maintenance cost — random walking the KB as a side effect of this structure
+- Knowledge becomes readable at human speed, written in your own voice
+
+*Failure modes:*
+- Deprecated content contamination: old worldbuilding (religious system example, anonymized) polluted new queries; the semantic search advantage over RAG is that you can find and remove semantic contamination without rebuilding embeddings — just locate the source documents and correct them
+- The `Pending_Terms` folder as a feature, not a bug: some contradictions cannot be resolved yet. Parking them explicitly, named as unresolved, lets you continue writing while keeping the knowledge base honest. Several pending contradictions later resolved themselves when new context emerged.
+- FrontMatter bloat: early tag systems without a Tag List generated hundreds of one-off tags that rendered the system meaningless
+
+*What surprised me:*
+- Building was easy. The first system took a few hours to understand; by the third or fourth, setup was under ten minutes, because the System Spec document had standardized the process
+- Upgrading and debugging is hard. Context management became a craft in itself — and a necessity. Cold start on first real ingestion: ~$100 in a single night. Total R&D burn across all systems: several hundred dollars. Stabilized to roughly $X–$Y/month by early March 2026.
+- The cost reduction on Horsys and NovelOS is in the thousands of times per query — which sounds dramatic until you realize it's what made high-intensity daily use possible in the first place
+
+**9. On Scale and Scope** (~150 words)
+- This architecture works at personal and small-team scale. With hundreds of thousands of words across several systems, semantic retrieval is still viable.
+- At enterprise scale, this approach breaks. The closing thought: a three-tier model (personal KB + initiative KB + company RAG) where this pattern occupies the first two tiers, and only completed initiatives get embedded into the company-wide RAG. Brief — forward reference to a separate piece.
+
+**10. Closing** (~100 words)
+- The design process itself captures tacit knowledge — not by extracting it automatically, but by forcing articulation
+- The role shift: you're a schema designer, not a data clerk
+- This isn't a replacement for human judgment. It's infrastructure for it.
+- Capital H Human.
+
+---
+
+## Articles 2–4: Brief Overviews
+
+**Article 2 — Tacit Knowledge and AI System Design**
+- Central argument: the hardest part of deploying an LLM knowledge system is not technical; it's that you can't fully specify what you know before you try to encode it (Polanyi's Paradox / "we know more than we can tell")
+- The FrontMatter setup process as a concrete instantiation of this problem
+- Intel paper as contrast: their Context Atlas approach captures tacit knowledge through SME corrections after the fact; this approach forces articulation upfront through schema design
+- Humanist lens: knowledge classification is an old problem; historians and archivists have thought about this for a long time
+- Ends with: what AI changes is not the problem, it's who can afford to solve it
+
+**Article 3 — Token Economics as a Design Constraint**
+- The cost curve: R&D is expensive; production can be cheap if the architecture is right
+- Every architectural decision maps to token cost; this forces you to be explicit about what you actually need the AI to read
+- De-blackboxing effect: when you optimize for token efficiency, you end up with cleaner, more auditable workflows
+- Enterprise application: you can't train employees to optimize tokens, so the architecture has to do it for them. The value is structural, not behavioral.
+- Personal vs. enterprise cost scaling
+
+**Article 4 — Scaling to Teams and Enterprises**
+- Why this architecture breaks at enterprise scale (context explosion, too many files to index)
+- Three-tier model: personal KB (tacit knowledge, habits, judgment) + initiative KB (project-specific, high-accuracy) + company RAG (completed initiatives, embedded at project end)
+- The information alignment problem: what you know vs. what others know vs. what the system knows
+- Initiative lifecycle: start with pull from company RAG → run as file-system KB during active work → embed to RAG on project close
+- Reduces RAG maintenance burden dramatically (update at start and end, not continuously)
+- Forward reference to separate piece on information/misinformation/disinformation alignment in enterprise AI
+
+---
+
+Two quick questions before we move to drafting Article 1 section by section:
+
+1. **Cost numbers**: what's the current monthly range I should use? You said "small tens of dollars" — is a range like "$20–60/month" accurate, or do you want to give me the actual figure?
+2. **Article 1 title**: the working title I proposed is descriptive but not particularly sharp. Do you have a preference, or should I propose a few options when we get there?
+
+═══ Vincent ═══
+
+我希望 Article 2 和 Article 3 的内容也跟 Article 1 在一块。把它分成两个部分：
+
+1. Article 1、2、3 的内容是一个部分
+2. Article 4 的内容是另一个部分我可以在把 1、2、3 的这些内容整合成一个大 Article 的时候，单独再拿其中一些没有完全铺开的点，或者我觉得可以单独再拿出来说的点继续写。
+
+但 1、2、3 的观点是一个体系下的。
+
+═══ 凌喵 ═══
+
+Good call. Articles 1, 2, and 3 are the same argument from three angles — the deployment story carries all three simultaneously rather than needing separate sections for each. Merging them makes a stronger piece.
+
+Here's the revised single-article structure showing where each thread lives:
+
+---
+
+## Article A — Revised Outline (merged 1+2+3)
+
+**Working title:** *Running Three LLM Knowledge Systems in Production: Architecture, Tacit Knowledge, and the Cost of Getting There*
+
+**Structure:**
+
+**1. Introduction** (~200 words)
+- I'm a historian of technology (UChicago MA) who built and runs three AI knowledge systems daily
+- Brief: what the three systems do, why the domains differ
+- The gap this fills: what production actually looks like, past proof-of-concept
+- One sentence: Karpathy's LLM Wiki as the foundation — if you haven't read it, read it first
+
+**2. Sparse Indexing in One Paragraph**
+- What index.md does; where it works; where it hits a ceiling
+- This is the floor, not the subject
+
+**3. The Dump**
+- Zero-decision ingestion; routing; Archive Agent
+- Cognitive load point: the psychological effect of not pre-sorting is as important as the technical effect
+- Single interface; Finance automation example (no Excel tab-switching)
+
+**4. Folder Structure as Navigation Layer**
+- Folder tree = QueryAgent's first decision layer
+- Designing it is designing your ontology
+- Show actual structure (anonymized)
+- `90_Deprecated` and `90_Pending_Terms` as intentional architectural choices
+
+**5. FrontMatter, Tags, and the Articulation Problem** ← *Tacit Knowledge thread enters here*
+- Archive Agent generates fields dynamically; you can't enumerate them all upfront
+- This is where Polanyi shows up in practice: *"we know more than we can tell."* The FrontMatter setup process requires you to articulate a schema you don't fully know yet — you discover the right fields by trying wrong ones
+- Brief contrast: the Intel / Context Atlas approach captures tacit knowledge after the fact, through SME corrections. This approach forces articulation upfront, through schema design. Both are solving Polanyi's Paradox; they resolve it at different points in the workflow.
+- Tag List: controlled vocabulary, auto-pruning, prevents proliferation
+- Field discipline: useless fields get removed through use, not through upfront planning
+
+**6. The QueryAgent: Hierarchical Retrieval**
+- Four-step read: folder → index → FrontMatter → body
+- FrontMatter as binary filter
+- Tag expansion for deliberate scope-widening
+- Human checkpoint: twice in several months
+
+**7. The Manifest: A Different Tool**
+- Navigation mechanism vs. compression mechanism
+- When approximate answers are sufficient (LifeOS)
+- When to use each
+
+**8. Practical Notes** ← *Token economics thread enters here*
+- **Cost as a design constraint**: every architectural decision in this article maps to a token cost. That's not incidental — it's why the architecture looks the way it does. Cold start: ~$100 first night. R&D total: several hundred dollars. Stabilized: [$X–Y]/month by March 2026. Cost reduction on Horsys and NovelOS: ~1000x per query — which is what made high-intensity daily use possible.
+- **Trade-offs**: ~10% token savings in retrieval; the real win is maintenance cost. Knowledge written in your voice is readable at human speed — random walking as an unexpected benefit.
+- **Failure modes**: deprecated content contamination; semantic vs. vector search advantage for cleaning it; Pending Terms as explicit contradiction parking
+- **Surprises**: building is easy (System Spec standardized replication to <10 min by system 3); upgrading and debugging is hard; context management became a craft and a budget constraint
+
+**9. On Scale** (~150 words)
+- Works at personal/small team scale; breaks at enterprise
+- Brief three-tier concept as a forward pointer — full treatment in a separate piece
+- The scalability ceiling is not a flaw; it's scope
+
+**10. Closing** (~150 words)
+- The design process itself is the tacit knowledge capture — not by extracting automatically, but by forcing articulation through iteration
+- Humanist observation: knowledge classification is an old problem. What AI changes is not the problem, it's who can afford to solve it.
+- Schema designer, not data clerk. Capital H Human.
+
+---
+
+## Article B — Enterprise Scaling (separate piece)
+
+Outline stays as previously described: three-tier model, initiative lifecycle, information alignment, RAG maintenance cost reduction, forward reference to information/misinformation/disinformation alignment.
+
+---
+
+The merge works because token economics isn't a separate topic — it's the reason the architecture is lean. And Polanyi isn't a separate topic — it's the explanation for why FrontMatter setup requires human iteration. Both threads sharpen the deployment story rather than extending it.
+
+Remaining open: the two cost numbers. What's the current monthly range?

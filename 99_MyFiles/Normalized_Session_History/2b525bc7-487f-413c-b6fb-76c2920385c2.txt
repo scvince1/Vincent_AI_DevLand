@@ -1,0 +1,267 @@
+═══ Vincent ═══
+
+当前这个东西执行出来，默认是用 Python 3 来运作，但是 Python 3 在 Windows 上被 Microsoft Store 的空壳劫持，所以 Hook 静默失效了。
+
+我希望最终把它 set up 出来的时候，可以直接用 python 命令来运行。针对这个需求，我有两个诉求：
+
+1. 代码调整与呈现：
+   如果需要对这个东西进行简单的调整和修改，请直接把代码以文档的形式呈现给我，我自己去修改后缀。
+
+2. 替代方案咨询：
+   我想知道如果不用 Python 环境来运行这样的 Hook，但要达到同样的效果，还有什么别的方法？
+
+我问这个的原因是准备把这个东西拿到公司的电脑上去用，而公司的电脑本身对于“可以使用什么命令”有非常严格的额外审核。我不想麻烦那么多，希望尽可能用一些系统原生自带的东西来处理（if possible）。
+
+═══ 凌喵 ═══
+
+看到 IDE 里开着 `c:\Python314\python3.bat` 了，所以 Python 确实在 `C:\Python314\`。
+
+---
+
+## 方案一：最小改动，指定完整路径
+
+在脚本顶部加一个变量，替换 3 处 `python` 调用。将以下内容存为 `.ps1` 执行即可：
+
+<code block: 112 lines of powershell, 省略>
+
+---
+
+## 方案二：纯 PowerShell，零依赖（推荐用于公司电脑）
+
+Windows 内置 PowerShell 5.1，无需安装任何东西。分两个文件：
+
+### 文件 1：`inject_datetime.ps1`（Hook 脚本本体）
+
+```powershell
+# Claude Code Hook - 时间注入器（PowerShell 原生版）
+# 用于 SessionStart / SubagentStart
+
+$inputJson = [Console]::In.ReadToEnd().Trim()
+if (-not $inputJson) { $inputJson = '{}' }
+
+try { $obj = $inputJson | ConvertFrom-Json }
+catch { $obj = [PSCustomObject]@{}
+
+═══ 凌喵 ═══
+
+两件事分开回答。
+
+---
+
+## 诉求 1：修复 Python 路径问题
+
+关键改动：脚本开头加一段路径探测，把 `python` 替换成完整路径，hook 命令里也带引号。以下是完整修改版（改动集中在 Step 0 和各处 `python` 调用）：
+
+<code block: 144 lines of powershell, 省略>
+
+---
+
+## 诉求 2：不依赖 Python 的替代方案
+
+按"公司机可用性"从高到低排列：
+
+---
+
+### 方案 A：JScript（cscript.exe）— 最保险
+
+`cscript.exe` 是 Windows 内置脚本宿主，从 XP 到 11 一直存在，无需任何安装，IT 基本不会限制它。
+
+`inject_datetime.js`（保存为此名，用 `cscript` 调用）：
+
+<code block: 22 lines of js, 省略>
+
+settings.json 里的 command：
+
+<code block: 1 lines of unknown, 省略>
+
+注意：时区只能显示 `UTC+8` 这类偏移格式，拿不到 `Asia/Shanghai` 这样的名称。
+
+---
+
+### 方案 B：PowerShell —— 更易读，但有执行策略风险
+
+`inject_datetime.ps1`：
+
+<code block: 14 lines of powershell, 省略>
+
+settings.json 里的 command：
+
+<code block: 1 lines of unknown, 省略>
+
+风险点：部分公司通过 GPO 限制 `-ExecutionPolicy Bypass`，这种情况下此方案失效。
+
+---
+
+### 横向对比
+
+| 方案 | 公司机可用性 | 时区精度 | 可读性 |
+|---|---|---|---|
+| Python（修复全路径） | 中（需 IT 批准安装） | 最高 | 高 |
+| JScript / cscript | **极高（原生，几乎不受限）** | 中（UTC 偏移） | 低 |
+| PowerShell .ps1 | 高（可能受执行策略限制） | 高（含时区名） | 高 |
+
+公司机首选 **JScript 方案**，它是真正零依赖的 Windows 原生方案。
+
+═══ Vincent ═══
+
+我有三个问题：
+
+1. 如果状况不对，我需要把这个 hook 删掉或者关掉，我应该怎么做？
+
+2. 如果我只是需要在某一个 session 里面临时实现这种抓取时间戳的技术，可以怎么实现？
+
+3. 我们讨论这个跨区部署的前置条件是：我的公司电脑不可以下载任何软件或文件。我必须手动复制代码，粘贴到 Windows 内置的工具里。如果代码要变成一个可运行的脚本文件，我需要自己改后缀或者手动打包。
+
+针对这种情况，我可以让 Claude 或者 Claude Code 来帮我进行吗？
+
+═══ 凌喵 ═══
+
+三个问题分开回答。
+
+---
+
+## Q1：如何关掉或删掉这个 Hook
+
+**完全删除：** 用任意文本编辑器打开 `%USERPROFILE%\.claude\settings.json`，找到并删除 `SessionStart` 和 `SubagentStart` 下对应的 hook 条目，保存即可。改完重启 Claude Code 生效。
+
+**临时禁用（不删文件）：** 把 `settings.json` 里 hook 命令改成无害命令，或者在条目里加一个 `"disabled": true`（Claude Code 不一定支持，但直接注释掉 JSON 会导致解析失败——所以最安全的临时方案是把 hook 条目整行删掉，需要时再粘贴回去）。
+
+实际上最快的操作：直接删掉 `inject_datetime.js`（或 `.py`）文件本身——hook 命令找不到文件会静默失败，不影响 Claude Code 正常使用，相当于软禁用。
+
+---
+
+## Q2：单次 Session 临时注入时间戳
+
+**最简单的方法：直接在第一条消息里说。**
+
+Claude Code 已经通过 `currentDate` system reminder 注入了今天的日期（你在上下文里能看到 `Today's date is 2026-04-06`）。Hook 额外提供的是小时分钟和时区。
+
+如果某次 session 需要精确时间，开头加一句：
+
+<code block: 1 lines of unknown, 省略>
+
+这比配置 hook 快得多，而且没有任何依赖。
+
+如果想要稍正式一点的一次性方案，可以在项目的 `CLAUDE.md` 里临时加一行，用完删掉——这只影响该项目，不动全局配置。
+
+---
+
+## Q3：公司机器只能手动复制粘贴，Claude / Claude Code 能帮吗？
+
+**可以，而且分两种场景：**
+
+**场景 A：Claude Code CLI 已经安装在公司机器上**
+
+直接在公司机器上开一个 Claude Code session，告诉 Claude：
+- "帮我在 `%USERPROFILE%\.claude\` 创建 `inject_datetime.js`，内容是这个（粘贴上面的 JScript 代码）"
+- "帮我修改 `settings.json`，加入这个 hook 配置"
+
+Claude Code 可以直接用 Write 和 Edit 工具操作文件，不需要你手动做任何文件操作。这是最省力的方式。
+
+**场景 B：公司机器只有浏览器（用 claude.ai）**
+
+Claude 当"代码生成器 + 操作指导"，你当"执行手"：
+
+1. 在 Claude 对话里生成目标文件内容
+2. 打开公司机器上的**记事本**（Notepad），粘贴代码
+3. 另存为时手动改扩展名（`inject_datetime.js`，保存路径 `%USERPROFILE%\.claude\`）
+4. 再用记事本打开 `settings.json`，按 Claude 给的指引加几行 JSON，保存
+
+关键点：**粘贴内容进记事本再保存 ≠ 下载文件**，这只是键盘输入，应该不触碰 IT 的限制。JScript 方案恰好最适合这种情况，因为：
+- 没有任何软件依赖
+- `cscript.exe` 是 Windows 内置的
+- 文件内容全是纯文本，记事本就能创建
+
+═══ Vincent ═══
+
+好，我觉得这个场景 A 的方式就很合适。我希望你给我生成一个 Markdown 文档，内容组织如下：
+
+1. 项目概述：
+   在最开头用最简单的语言表达清楚，我们在做的这件事情是什么，以及为什么要执行这个操作。
+
+2. 卸载与风险处理（宝宝版）：
+   (a) 如果出现了问题，我应该如何删除这个东西。
+   (b) 这部分内容需要尽可能详细且不令人感到害怕（non-scary）。
+
+3. 使用指南（Step by Step 宝宝版）：
+   (a) 详细说明如何安装这个 Hook。
+   (b) 最终实现的效果是什么样的。
+
+4. 完整代码：
+   在文档最后把整个代码复制粘贴进去。
+
+反正前面的内容大概就是这些，你自己看着组织。生成之前先跟我确认一遍整个文档的 outline。
+
+═══ 凌喵 ═══
+
+先确认 outline，你看看这样组织合不合适：
+
+---
+
+**文档标题**：Claude Code 时间感知 Hook — 使用手册
+
+---
+
+**第一节：项目概述**
+- 这个东西解决什么问题（Claude 不知道当前时间和时区）
+- 一句话说清楚它怎么工作
+- 本文档的适用场景（公司机器，通过 Claude Code 对话完成操作）
+
+**第二节：卸载与风险处理**
+- 前置说明：它改动了哪些文件、不会碰哪些东西（先消除顾虑）
+- 临时禁用：只删脚本文件，settings.json 不动
+- 彻底卸载：打开 settings.json，删掉两处配置，粘贴还原步骤
+- 如果 Claude Code 出现异常：应急操作清单
+
+**第三节：安装指南（Step by Step）**
+- 前置确认：只需要 Claude Code 已安装，无其他要求
+- 安装步骤：全程通过 Claude Code 对话完成，不需要手动碰文件
+  - Step 1：打开 Claude Code，新建对话
+  - Step 2：让 Claude 创建 `inject_datetime.js`（告诉它粘贴哪段代码、存到哪里）
+  - Step 3：让 Claude 修改 `settings.json`，加入两条 Hook 配置
+  - Step 4：重启 Claude Code，验证是否生效
+- 效果预览：安装后每次对话开头 Claude 收到的内容长什么样
+
+**第四节：完整代码**
+- `inject_datetime.js`（JScript 版，cscript.exe 原生，零依赖）
+- `settings.json` 中需要添加的 Hook 配置片段
+
+---
+
+**几个待确认的决策：**
+1. 代码方案默认用 **JScript**（最适合公司机），要不要附上 PowerShell 版作为备选？
+2. 文档语言：**中文**，还是中英对照？
+3. 安装步骤里写的是"让 Claude 帮你操作"——这符合你预期的使用方式吗？
+
+确认没问题我就开始写。
+
+═══ Vincent ═══
+
+我建议附上一个 Python 版作为备选。代码最终生成两个版本：一版是中文，一版是英文。
+
+目前我的受众是可以阅读中英文的，并且足够 tech-savvy。我的老板 Joyce（也是我的女朋友）虽然足够专业，但她非常忙，没有太多时间。所以给她的东西要尽可能简略、直白、不复杂，直接告诉她：
+1. 我要干什么
+2. 为什么这件事跟你有关系
+3. 为什么要这么干
+4. 这么干完就完事了，最直给
+
+同时，我希望生成的内容是她可以直接转交给组内其他成员，或者给办公室同层次、甚至更高层领导看的。所以排版要简洁，但在说法上要适当平衡。
+
+关于 Claude 的处理或代码级的处理，我建议：
+1. 代码级的内容一定要有
+2. 不要让他们被 Claude 这种“无脑”的东西惯坏了
+3. 对于代码的熟悉程度要从一开始就培养
+
+═══ 凌喵 ═══
+
+两个文件已创建：
+
+- [claude_datetime_hook_zh.md](d:\Ai_Project\MeowOS\claude_datetime_hook_zh.md) — 中文版
+- [claude_datetime_hook_en.md](d:\Ai_Project\MeowOS\claude_datetime_hook_en.md) — 英文版
+
+**几个设计决策说明一下：**
+
+1. **卸载章节放在安装前面** — 目的是让读者（包括 Joyce）先有安全感再往下看，而不是装完了再找退路。
+2. **Step 1 是"先读代码"** — 不是要求读懂，是让读者知道系统里多了什么、做了什么，对应你说的"从一开始培养对代码的熟悉度"。没有跳过这一步的借口。
+3. **英文版代码输出格式** — 周X 的格式保留中文，因为实际部署用户是你，时区环境是中文 Windows。如果 Joyce 团队要用英文输出，告诉我，两行代码的事。
+4. **两版 settings.json 片段都在** — 安装指南里只引用附录，代码只在附录里出现一次，不重复粘贴。

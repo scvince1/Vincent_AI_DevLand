@@ -1,0 +1,9 @@
+═══ Vincent ═══
+
+我现在这个 session 结束的 hook 是什么来着？我记得好像刚刚搞了一个用 hive 库怎么着，写入知识库还是干什么的一个东西。
+
+═══ 凌喵 ═══
+
+目前 settings.json 里**没有** session 结束 hook，只有 SessionStart 和 SubagentStart（都是 inject_datetime.py 注入时间）。
+
+"hive 库"那个可能没有写进 settings.json，或者是在另一个地方配置的——要不要我帮你搜一下 `.claude` 目录下有没有相关脚本？喵~

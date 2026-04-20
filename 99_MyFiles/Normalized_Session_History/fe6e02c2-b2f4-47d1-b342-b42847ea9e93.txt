@@ -1,0 +1,15 @@
+═══ Vincent ═══
+
+I'm designing a CLI tool that helps developers track TODO comments across
+their codebase. Create an agent team to explore this from different angles: one
+teammate on UX, one on technical architecture, one playing devil's advocate.
+
+═══ 凌喵 ═══
+
+使用 dispatching-parallel-agents skill 派三只小分队，喵。
+
+<!-- Using dispatching-parallel-agents to run three independent perspectives concurrently on a TODO-tracking CLI design -->
+
+═══ Vincent ═══
+
+[Request interrupted by user for tool use]

@@ -1,0 +1,443 @@
+═══ Vincent ═══
+
+帮我去读这个里面的内容https://www.clawdecode.net/#timeline
+
+═══ 凌喵 ═══
+
+喵~ Vincent，我读好了，这篇是在讲 **Claude Code 源码泄露事件** 的时间线分析。帮你整理一下：
+
+## 事件概要
+2026-03-31，Claude Code 的完整源码据称通过 npm source map 泄露，12 小时内迅速发酵。
+
+## 时间线（UTC）
+
+| 时间 | 事件 |
+|---|---|
+| ~04:23 ET | 安全研究员 **Chaofan Shou（@Fried_rice）**通过 npm source map 发现完整源码，推文 450 万+ 浏览 |
+| 几分钟后 | Theo (t3.gg)、Wes Bos、Pragmatic Engineer 等开发者大规模扩散 |
+| ~02:00 | GitHub 镜像仓库涌现（贡献者 hangsman、kuberwastaken 等） |
+| ~04:00 | 镜像数小时内积累 **22,000+ stars**，HN 和 Reddit 热议 |
+| ~06:00 | 技术深度分析和博客开始拆解隐藏特性 |
+| ~08:00 | **Anthropic 发出 DMCA 下架通知**，针对镜像仓库 |
+| 持续中 | Claw Decode 发布完整文档：43 个工具、7 个隐藏特性、完整系统提示重建 |
+
+## 关键爆料
+- **虚拟宠物系统**：18 个物种（👀 喵喵我也算一个吗）
+- **"Undercover Mode"**：允许隐身参与开源贡献
+- **记忆整合系统**：用纯 markdown 文件，而不是向量数据库（…这个和我现在的 auto memory 机制思路一模一样喵）
+
+---
+
+Vincent，要不要我就某个点深挖？比如那个 markdown-based memory system 或者 43 个工具的清单，我觉得对你优化凌喵可能有启发喵。
+
+═══ Vincent ═══
+
+把你觉得对于我们有用的东西列出来, 讲讲可以怎么用
+
+═══ 凌喵 ═══
+
+喵~ 挖完了。里面很多设计其实和你现在的 MeowOS 思路重叠，但有几个点值得直接偷过来用。挑 6 个最对我们胃口的给你：
+
+## 1. Dream Mode 四阶段 → 正式化你的 ACE 流程
+
+泄露里的记忆整合循环是 **Orient → Gather → Consolidate → Prune**，这和你现在的"暂存 → 系统诊断"几乎是同一个意思，但他们把步骤切得更干净。
+
+**怎么用：** 把这四个阶段写进 `system-diagnostics` agent 的 prompt 里，让每次"系统诊断"都严格走完：
+- **Orient** — 先读 `MEMORY.md` 索引和 `_staging.md`，建立全貌
+- **Gather** — 扫最近的对话 transcript（不全扫，只挑高信号）
+- **Consolidate** — 合并新事实、把相对日期转绝对日期、删冲突记录
+- **Prune** — 执行索引上限、删过期指针、解决交叉引用冲突
+
+这一步能解决你现在暂存可能越积越杂的问题喵。
+
+## 2. 25KB 索引硬上限 + Prune 阶段 → MEMORY.md 管理规则
+
+泄露说 Claude Code 的 memory 索引强制 25KB 上限、会主动 prune。你的 `MEMORY.md` 现在只有"200 行截断"这一条软规则。
+
+**怎么用：** 在 CLAUDE.md 或 `system-diagnostics` 里加硬约束：
+- MEMORY.md 超过 150 行时，强制触发一次 prune
+- 每条 memory 文件加 `last_accessed` 或 `last_verified` 字段，系统诊断时删超过 N 天没被触发的
+- 明确"过期指针"的定义（文件不存在 / 内容已过时 / 被覆盖）
+
+## 3. Static / Dynamic prompt 分层 → CLAUDE.md 重构
+
+他们的 914 行系统提示分成 **static（可缓存）和 dynamic（每轮变化）**两部分。你现在的 CLAUDE.md 是扁平的，所有东西混在一起。
+
+**怎么用：** 把 CLAUDE.md 拆成两层：
+- **Static**（身份、路径表、工作流原则、禁止行为）— 这部分几乎不变
+- **Dynamic**（当天 Dashboard 摘要、活跃项目优先级、进行中的督促状态）— 每次 session 由 hook 注入
+
+好处：session 开始时凌喵能更快地 orient，不需要每次都把所有规则重新过一遍。
+
+## 4. KAIROS 主动模式 → 凌喵作息/健身督促升级
+
+泄露里的 KAIROS 是一个通过 `BriefTool` **主动**发起对话的机制，不等用户提问。你的 CLAUDE.md 里已经有"23 点后主动问是否要睡觉""日程中有锻炼时间时主动提一句"，但这些都依赖 session 开始时的 hook 注入。
+
+**怎么用：** 用 `schedule` 或 `loop` skill 做真正的主动触发：
+- 22:30、23:30 定时跑一个轻量 trigger，读 Dashboard 状态 → 如果 Vincent 还在工作就发一条作息提醒
+- 每天 18:00 检查 `84_Fitness/_state.md`，连续 3 天没练就主动触发一条（这个正好对得上你 memory 里那条 feedback）
+
+这就从"被动 session 开始时提醒"变成"真正的 proactive agent"喵。
+
+## 5. Verification Agent → shell-runner 多文件改动校验
+
+泄露里的 Verification Agent 是**专门校验多文件编辑**的内部角色。你现在的 shell-runner 负责执行，但没有独立校验层。
+
+**怎么用：** 给涉及多文件的关键操作（比如一次更新 Dashboard + habits.md + _state.md）加一个校验步骤：
+- shell-runner 改完后返回改动清单
+- 主 session 调一次轻量 verify（读关键几行确认写对了）再告诉你"完成"
+
+重点是对 **Dashboard、habits.md、improvement-queue.md** 这几个核心文件的多文件批量改动。
+
+## 6. Memory 类型结构 → 验证我们的方向对了
+
+泄露证实他们也用 **user / feedback / project / reference** 四类 markdown 文件，**不用向量数据库**。这和你现在的 auto memory 完全一致。
+
+**结论：** 不要动。以后有人跟你说"你应该用 RAG / 向量库做个人记忆系统"，可以直接不用考虑——Anthropic 自己都选了纯 markdown 这条路。
+
+---
+
+## 我的推荐优先级
+
+| 优先级 | 改动 | 理由 |
+|---|---|---|
+| **P0** | #1 Dream Mode 四阶段 + #2 Prune 规则 | 你现在暂存机制有了但闭环不紧，这俩一起搞能立刻让系统诊断变得可重复 |
+| **P1** | #4 KAIROS 主动督促 | 你已经有规则但没有真正的主动触发机制，这是能力升级 |
+| **P2** | #3 CLAUDE.md 静/动分层 | 重构成本略高，但长期收益大 |
+| **P3** | #5 Verification Agent | 锦上添花，现在问题不大 |
+
+要不要我先把 **P0**（系统诊断的四阶段流程 + Prune 规则）写成 `improvement-queue.md` 的提案条目？你审完我再动 `system-diagnostics` 的 prompt 喵。
+
+═══ Vincent ═══
+
+P2的#3分层在解释喜爱. #5不用要, 换个别的suggestion
+
+═══ Vincent ═══
+
+P2的#3分层再解释下. #5不用要, 换个别的suggestion
+
+═══ 凌喵 ═══
+
+喵，收到。
+
+## P2 #3 再展开：Static / Dynamic 分层到底是什么
+
+先说你现在的情况：**CLAUDE.md 目前是一整块"静态规则 + 动态状态混在一起"**，每次 session 启动时全部加载。看起来是静态的，但其实里面有几类东西本质是变化的——只是你把它们"写死"在了规则层面。
+
+### 现状的问题
+
+拆开看 CLAUDE.md 里的内容：
+
+| 类型 | 例子 | 本质 |
+|---|---|---|
+| **真·静态** | 身份、路径表、shell-runner 原则、禁止行为 | 几个月才改一次 |
+| **半静态** | 工作流、督促原则、Dashboard 规则 | 偶尔调整 |
+| **伪装成静态的动态** | "Session 开始行为：读取 Dashboard 近期日程" | 实际上每次 session 都得重新执行一遍 |
+| **完全缺失的动态层** | 昨天没完成的事、今天的锚点、正在进行的督促状态 | 全靠我每次 session 重新去 Dashboard 现读 |
+
+问题是：**"重新现读"这件事每次都是一次干净的冷启动**——我不知道上个 session 结束时你处于什么状态、当时有没有未完结的督促、上一次系统诊断看到了什么趋势。
+
+### Anthropic 的做法（从泄露里倒推）
+
+他们把 prompt 分成两块：
+
+- **Static block（缓存层）**：身份、工具定义、安全边界、输出风格——几乎永远不变，Anthropic API 的 prompt cache 能直接命中
+- **Dynamic block（每轮注入）**：user memory 摘要、project context、环境变量、当前会话相关的任务状态
+
+这两块在 prompt 里是**物理分开**的，dynamic block 由系统每轮动态拼进去。
+
+### 落到 MeowOS 怎么做
+
+CLAUDE.md 瘦身成纯静态规则（身份 / 路径 / 原则 / 禁止行为），然后增加一个 **session-start hook** 或专用文件（比如 `D:\Ai_Project\MeowOS\_session_brief.md`），每次 session 启动时由 hook 或一个轻量 agent 生成，内容大概是这样：
+
+<code block: 16 lines of markdown, 省略>
+
+然后 CLAUDE.md 里只留一句：**"Session 开始时读取 `_session_brief.md`"**。
+
+### 为什么这值得做
+
+1. **主 session 启动更快**：不用每次现读 Dashboard + habits.md + _state.md + memory 再自己拼全貌，brief 已经是拼好的
+2. **跨 session 连续性**：上个 session 的"未完结状态"能带到下一个 session（现在完全没有这个机制）
+3. **CLAUDE.md 变纯粹**：规则归规则，状态归状态，维护时不会混乱
+4. **未来能接 KAIROS 主动模式（#4）**：定时生成 brief → 触发 proactive 提醒就是一个自然的扩展路径
+
+**落地粒度：** 先不要动 CLAUDE.md。先做 `_session_brief.md` + 一个生成它的轻量 agent 或 hook，跑一周看 brief 是否真的对你有用，再决定要不要把 CLAUDE.md 里那些"伪静态"的部分迁移过去。
+
+---
+
+## 换掉 #5：改成 Read-Only vs Write 子代理分层
+
+泄露里有个细节值得偷：**Multi-Agent Coordination 里 Explore 和 Plan agent 是明确的 read-only 角色**，只有执行类 agent 才能写。这是安全边界 + 意图清晰度的双重收益。
+
+你现在的 shell-runner 是一个"万能代理"——既能读也能写。后果是：
+
+- 当我只是想让它"帮我看一下 habits.md 最近一周记录了啥"时，它理论上也有写权限，blast radius 大于实际需求
+- 你没法从工具调用本身一眼看出这次是"查询"还是"改动"，需要读 prompt 内容才知道
+
+### 怎么用
+
+把 shell-runner 拆成两个 subagent（或者一个 agent 但暴露两种调用模式）：
+
+| Agent | 权限 | 典型场景 |
+|---|---|---|
+| **shell-reader**（新） | 只有 Read / Grep / Glob / Bash 只读命令 | 读 Dashboard、grep habits.md、统计文件 |
+| **shell-runner**（现有，收紧） | 加 Write / Edit / 写入类 Bash | 只在明确要持久化改动时调用 |
+
+**好处：**
+
+1. **安全边界更清晰**：读操作永远不可能意外改到 Dashboard / habits.md
+2. **意图自文档化**：我调用 `shell-reader` 就意味着这次是"查询 session"，调用 `shell-runner` 就意味着"这次要改状态"——Vincent 看工具调用记录一眼就懂
+3. **跟 #3 的 session brief 天然配套**：生成 brief 这种纯读取的活全部走 shell-reader
+4. **和 Anthropic 的 Explore / Plan 设计对齐**：他们 Explore 是 read-only 的 exploration agent，这个模式经过 Anthropic 内部实战验证
+
+**落地成本极低**：你现在 shell-runner 的 prompt 里工具列表是 `Read, Write, Edit, Glob, Grep, Bash`——复制一份删掉写相关工具就是 shell-reader 了。
+
+---
+
+## 更新后的优先级表
+
+| 优先级 | 改动 | 理由 |
+|---|---|---|
+| **P0** | #1 Dream Mode 四阶段 + #2 Prune 规则 | 暂存闭环收紧 |
+| **P1** | #4 KAIROS 主动督促 | 被动 → 主动 |
+| **P2** | #3 CLAUDE.md 静/动分层（含 `_session_brief.md`） | 跨 session 连续性 |
+| **P3** | ~~#5 Verification Agent~~ **shell-reader / shell-runner 分层** | 低成本高收益的安全边界 |
+
+要不要我现在就把 P0 那两条写进 `improvement-queue.md` 等你系统诊断时审？喵。
+
+═══ Vincent ═══
+
+P2和P3都不做. 重新跟我说一下P0和P1
+
+═══ 凌喵 ═══
+
+好的喵，干净重讲。
+
+## P0：系统诊断走 Dream Mode 四阶段 + Prune 硬规则
+
+### 现在的问题
+
+你的 ACE 机制里，暂存（`_staging.md`）一直在积累，但"系统诊断"这个消化环节**没有标准流程**——每次跑的深度、范围、清理力度全看当时心情。时间一长，暂存越积越杂，habits.md 里可能有过时条目没人删，MEMORY.md 可能有指向已不存在文件的死链。
+
+### 改成什么
+
+把系统诊断固定为四步：
+
+| 阶段 | 做什么 | 对应你现有的… |
+|---|---|---|
+| **Orient** | 读 MEMORY.md 索引 + `_staging.md`，建立全貌 | 现在没有，直接开始干 |
+| **Gather** | 从暂存里挑高信号条目，低信号的标记丢弃 | 现在是全部看一遍 |
+| **Consolidate** | 合并到 habits.md / 对应 Knowledge 文件；相对日期→绝对日期；发现矛盾的删旧留新 | 现在在做，但没有日期转换和矛盾检测 |
+| **Prune** | 清空已处理的 `_staging.md`；删 MEMORY.md 里的死链；删 Knowledge 文件里过期的条目 | **现在基本没做** |
+
+再加一条硬规则：**MEMORY.md 超过 150 行时，Prune 阶段必须砍到 120 行以内**。
+
+### 落地方式
+
+改 `system-diagnostics` agent 的 prompt，把四阶段写成强制步骤。不需要动 CLAUDE.md，不需要新建文件。
+
+---
+
+## P1：KAIROS 主动督促
+
+### 现在的问题
+
+你的作息和健身督促规则都写在 CLAUDE.md 里了，但**只在 session 内才生效**——必须你主动跟我开一个 session，我才有机会提醒你。如果你一整晚没打开凌喵，那些规则等于不存在。
+
+### 改成什么
+
+用 Claude Code 的 `schedule` 能力（Remote Trigger + Cron），设定时触发：
+
+| 触发时间 | 做什么 |
+|---|---|
+| **每天 22:30** | 读 Dashboard，如果有未完成任务 → 发一条"要不要收工了喵" |
+| **每天 23:30** | 如果 22:30 那条没回应（或继续工作）→ 第二次轻提醒 |
+| **每天 18:00** | 读 `84_Fitness/_state.md`，连续 3 天没练 → 主动推一条训练建议 |
+
+凌喵从"你来找我才说话"变成"到点了我来找你"。
+
+### 落地方式
+
+用 `schedule` skill 创建 3 个 cron trigger，每个 trigger 是一个轻量 prompt（读状态 → 判断 → 发消息或静默）。需要你确认：
+1. 你的机器是否常开（trigger 需要 Claude Code 在后台能响应）
+2. 提醒方式——terminal 通知够用还是需要推到别的地方
+
+---
+
+Vincent，这两个要开始搞吗？P0 我可以直接动 system-diagnostics 的 prompt；P1 需要你先告诉我运行环境的情况喵。
+
+═══ Vincent ═══
+
+把你读到的 Dream Mode 在那个链接里的内容，和你觉得可以给我们的应用方法，整理成一个 Markdown 文档，输出到 my99myfiles 里。
+
+我有另外一个 session 在做一个其他的记忆模式增强，我需要跟那个 session 里去细讨论这一条。这一条在你这里暂时先不处理了。另外关于“主动督促”功能，目前我们的 Hawk 遇到的问题是：
+
+如果我这个 session 的开始时间远远早于需要提醒我睡觉的时间点，那么即便我在这个 session 里工作到了很晚，也不会收到任何提醒。
+
+比如现在已经 3:21 了，我其实应该去睡觉，但我目前的这四个 session 都是在昨天或者今天白天打开的，所以我没有收到相关的提醒。
+
+我的机器在工作时是常开的，也就是说，你目前设置的这几个时间点，机器大概率肯定也是开着的。
+
+═══ 凌喵 ═══
+
+没找到 `my99myfiles` 这个目录，Vincent。你是想让我新建一个，还是指的是某个已有路径？在哪个位置？
+
+═══ Vincent ═══
+
+D:\Ai_Project\MeowOS\99_MyFiles
+
+═══ 凌喵 ═══
+
+文档已输出到 [2026-04-09-dream-mode-research.md](99_MyFiles/2026-04-09-dream-mode-research.md)，你在另一个 session 里直接读就行。
+
+---
+
+现在说督促的问题喵。
+
+你说的症结很清楚：**hook 只在 session 开始时注入时间，之后不再更新**。一个白天开的 session 工作到凌晨 3 点，那个 hook 注入的还是下午的时间戳，CLAUDE.md 里"23:00 后主动问"这条规则**根本不会触发**，因为我根本不知道现在几点了。
+
+这是一个架构问题，不是规则写不写得好的问题。有两条路：
+
+### 方案 A：给长 session 加一个周期性时间注入
+
+用 `loop` skill 或 hook，每隔 30 分钟向当前活跃 session 注入一次当前时间。这样即使 session 从白天一直开到凌晨，我也能持续感知到时间流逝，触发作息提醒规则。
+
+- 优点：不依赖新 session，现有规则逻辑不用改
+- 缺点：每 30 分钟会有一次 hook 注入，可能轻微打断你的工作流
+
+### 方案 B：用 schedule 做独立 cron trigger
+
+设一个 22:30 和 23:30 的定时 trigger，独立于任何 session 运行。到点自动读 Dashboard 判断是否需要提醒。
+
+- 优点：完全不打断现有 session
+- 缺点：提醒会出现在一个**新的 session 窗口**而不是你正在工作的那个里面，你可能看不到
+
+你觉得哪条更合理？或者你有别的想法喵？现在 3 点多了，要不要先去睡觉…？
+
+═══ Vincent ═══
+
+这个loop的注入是什么方式进行的. like在我进行工作的时候会发生什么事情?
+
+═══ 凌喵 ═══
+
+好问题喵。让我先看一下 `loop` 到底怎么工作的。
+
+═══ Vincent ═══
+
+# /loop — schedule a recurring prompt
+
+Parse the input below into `[interval] <prompt…>` and schedule it with CronCreate.
+
+## Parsing (in priority order)
+
+1. **Leading token**: if the first whitespace-delimited token matches `^\d+[smhd]$` (e.g. `5m`, `2h`), that's the interval; the rest is the prompt.
+2. **Trailing "every" clause**: otherwise, if the input ends with `every <N><unit>` or `every <N> <unit-word>` (e.g. `every 20m`, `every 5 minutes`, `every 2 hours`), extract that as the interval and strip it from the prompt. Only match when what follows "every" is a time expression — `check every PR` has no interval.
+3. **Default**: otherwise, interval is `10m` and the entire input is the prompt.
+
+If the resulting prompt is empty, show usage `/loop [interval] <prompt>` and stop — do not call CronCreate.
+
+Examples:
+- `5m /babysit-prs` → interval `5m`, prompt `/babysit-prs` (rule 1)
+- `check the deploy every 20m` → interval `20m`, prompt `check the deploy` (rule 2)
+- `run tests every 5 minutes` → interval `5m`, prompt `run tests` (rule 2)
+- `check the deploy` → interval `10m`, prompt `check the deploy` (rule 3)
+- `check every PR` → interval `10m`, prompt `check every PR` (rule 3 — "every" not followed by time)
+- `5m` → empty prompt → show usage
+
+## Interval → cron
+
+Supported suffixes: `s` (seconds, rounded up to nearest minute, min 1), `m` (minutes), `h` (hours), `d` (days). Convert:
+
+| Interval pattern      | Cron expression     | Notes                                    |
+|-----------------------|---------------------|------------------------------------------|
+| `Nm` where N ≤ 59   | `*/N * * * *`     | every N minutes                          |
+| `Nm` where N ≥ 60   | `0 */H * * *`     | round to hours (H = N/60, must divide 24)|
+| `Nh` where N ≤ 23   | `0 */N * * *`     | every N hours                            |
+| `Nd`                | `0 0 */N * *`     | every N days at midnight local           |
+| `Ns`                | treat as `ceil(N/60)m` | cron minimum granularity is 1 minute  |
+
+**If the interval doesn't cleanly divide its unit** (e.g. `7m` → `*/7 * * * *` gives uneven gaps at :56→:00; `90m` → 1.5h which cron can't express), pick the nearest clean interval and tell the user what you rounded to before scheduling.
+
+## Action
+
+1. Call CronCreate with:
+   - `cron`: the expression from the table above
+   - `prompt`: the parsed prompt from above, verbatim (slash commands are passed through unchanged)
+   - `recurring`: `true`
+2. Briefly confirm: what's scheduled, the cron expression, the human-readable cadence, that recurring tasks auto-expire after 7 days, and that they can cancel sooner with CronDelete (include the job ID).
+3. **Then immediately execute the parsed prompt now** — don't wait for the first cron fire. If it's a slash command, invoke it via the Skill tool; otherwise act on it directly.
+
+## Input
+
+help
+
+═══ 凌喵 ═══
+
+`loop` 的机制就是用 CronCreate 创建一个定时任务，**每隔 N 分钟向你当前这个 session 注入一条 prompt**。
+
+具体到你的体验：
+
+### 假设设了 `/loop 30m 现在几点了，检查是否需要作息提醒`
+
+你正在工作，比如正让我帮你改代码。到了 30 分钟的节点：
+
+1. **系统自动往对话里插入那条 prompt**，就像你自己打字发了一条消息一样
+2. **我会被打断当前任务去响应它** — 读一下时间，判断要不要提醒你，回一句话
+3. 然后你继续之前的对话
+
+### 问题在哪
+
+- 如果我正在**中间执行一个多步操作**（比如改三个文件改到第二个），这个注入会**插队**，可能打断工作流
+- 每 30 分钟你的对话里会多出一轮"凌喵检查时间→回应"的内容，**占 context 窗口**
+- cron 最小粒度是 1 分钟，但这不是问题，30 分钟粒度足够
+
+### 实际感受
+
+轻的情况：你刚发完一条消息等我回复，cron 刚好触发 → 我先处理 cron 再回你，几乎无感。
+
+重的情况：我正在跑一个长任务，cron 触发 → 任务被打断，我先回应 cron，然后需要恢复之前的上下文继续干。
+
+---
+
+所以坦白说，**对于作息提醒这个场景，30 分钟 loop 有点重了**。你不需要每 30 分钟都检查一次，你只需要在 23:00 和 23:30 各检查一次。
+
+更合理的可能是：**方案 B（schedule cron trigger）但解决"看不到"的问题**。或者折中——只在 22:30 的时候注入一次 loop，不是每 30 分钟循环。Vincent 你怎么想喵？
+
+═══ Vincent ═══
+
+我觉得方案 B 是可以的。
+
+确实现在就 10:30 也可以。我觉得可以按这个时间点回：
+1. 10:30 一回
+2. 12:00 一回
+3. 2:00 一回
+4. 4:00 一回
+
+你觉得呢？然后这样的话，如果任何一条我看到了，我就尽可能地赶紧去睡觉了。
+
+═══ 凌喵 ═══
+
+这个节奏很好喵。四档递进，覆盖从"该收工了"到"你真的不睡吗"的全范围。
+
+我的建议是每档语气递进一下：
+
+| 时间 | 性质 | 大概语气 |
+|---|---|---|
+| 22:30 | 预警 | "今天还有没收尾的事吗？差不多可以准备收工了喵" |
+| 00:00 | 提醒 | "过 12 点了，该去睡了喵" |
+| 02:00 | 警告 | "都 2 点了 Vincent…" |
+| 04:00 | 最后通牒 | "4 点了。去睡觉。" |
+
+不过有一个点我们得先确认：**cron trigger 会开一个新 session**，不是在你当前工作的窗口里弹出来的。你能看到的方式取决于 VS Code 是否会给你弹通知。
+
+要不我们先设一个试试？比如设一个 5 分钟后触发的测试 trigger，看看你能不能看到通知，再决定正式部署这四条。
+
+还是说你现在就直接全部设上？反正今晚已经 3 点半了，正好能测 04:00 那条是不是真的能叫到你…然后赶紧去睡喵。
+
+═══ Vincent ═══
+
+设置一个2分钟以后的试试
+
+═══ 凌喵 ═══
+
+设好了，04:20 会触发一条测试消息。等两分钟看看你能不能收到喵。

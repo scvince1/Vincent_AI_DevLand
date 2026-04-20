@@ -1,0 +1,85 @@
+═══ Vincent ═══
+
+我们在搞 Personal Knowledge Base 的这种 structure 的时候，Manifest 的这个机制是什么样的人去设计的？
+
+有没有现行的一些 research 能够给我大概介绍一下？给我几篇就行。我只是想知道 Manifest 这个词汇，或者是这样的一种架构的出处。
+
+═══ 凌喵 ═══
+
+好问题喵。你的 Manifest 概念其实坐落在三条学术脉络的交叉点上：
+
+---
+
+## 词源
+
+"Manifest" 在计算领域（JAR、Android）直接来自**航运货物清单**——一份描述集装箱内容的文件，*让你不用打开每个箱子*。你的用法保留了这个核心隐喻：预先压缩好的摘要，替代逐个读文件。但在知识管理/信息检索文献里，我没有找到先例——这个命名在 PKB 语境下应该是你原创的喵。
+
+---
+
+## 推荐的几篇文献
+
+**最直接的祖先（信息科学）：**
+
+1. **F.W. Lancaster, *Indexing and Abstracting in Theory and Practice*** (3rd ed., 2003) — 区分了 **indicative abstract**（告诉你文档关于什么，你再决定是否读 = 你的 sparse index）和 **informative abstract**（包含核心发现，可能不需要读原文 = 你的 manifest）。这个 distinction 就是你 Section 7 那张表的理论基础。
+
+**LLM 时代最相关的：**
+
+2. **RAPTOR** (Sarthi et al., ICLR 2024) — 递归地对文本块做聚类 → 生成抽象摘要 → 构建摘要树。查询时可以在任意层级回答，高层摘要节点不需要读底层原文。这基本就是你的 Manifest 的树状版本。[arxiv.org/abs/2401.18059](https://arxiv.org/abs/2401.18059)
+
+3. **GraphRAG** (Darren Edge et al., Microsoft Research, 2024) — 从文档构建实体知识图谱，然后对实体社区预生成"community summaries"。这些摘要本身就能回答全局性/态势感知类问题——正是你说的 "approximate awareness" 场景。[arxiv.org/abs/2404.16130](https://arxiv.org/abs/2404.16130)
+
+4. **LlamaIndex Document Summary Index** (Jerry Liu, 2023) — 工程实现层面最接近你的模式：对每个文档预生成 LLM 摘要作为检索表面，先匹配摘要再决定是否深读。这是 practitioner artifact 而非论文，但验证了这是 LLM 工具生态里的 established pattern。
+
+**再深一层：**
+
+5. **HIRO** (Hosking, Tang, Lapata; TACL 2024) — 层级化离散索引本身携带语义信息，模糊了"索引"和"摘要"的边界。[aclanthology.org/2024.tacl-1.84](https://aclanthology.org/2024.tacl-1.84/)
+
+6. **ACID** (Haoxin Li et al., 2023) — 用 LLM 生成的摘要性关键短语替代文档 ID，最激进的版本：元数据层不只帮你找文档，它*就是*文档的压缩内容。[arxiv.org/abs/2311.08593](https://arxiv.org/abs/2311.08593)
+
+---
+
+## 一句话总结
+
+你的 Manifest 是 Lancaster 的 "informative abstract" 被 LLM 规模化到文档集群级别，由 AI 而非人类 abstractor 维护。RAPTOR 做了树状版本，GraphRAG 做了图状版本，你做的是文件夹/集群版本。设计这类系统的人横跨**信息科学家**（Lancaster 那一脉）和 **LLM 检索研究者**（Stanford/Microsoft 那一脉）。
+
+写文章的话，Lancaster 那本书 + RAPTOR + GraphRAG 三篇足够建立 intellectual lineage 了喵。
+
+═══ Vincent ═══
+
+把这几篇文章的原文（除了那本书以外），能不能找到下载它们的 PDF 链接？
+
+或者下载某一个我可以读取的文档。我的偏好如下：
+1. 偏好 PDF 和 Markdown
+2. 我不是很喜欢 Docs
+3. 可以接受 TXT
+4. 不接受 EPUB
+
+先告诉我有没有、能不能找到，咱们再说这个下不下。
+
+═══ 凌喵 ═══
+
+全部确认完毕喵，情况如下：
+
+| # | 论文 | 格式 | 可下载？ | 链接 |
+|---|------|------|---------|------|
+| 1 | **RAPTOR** (Sarthi et al., ICLR 2024) | PDF | ✅ | `https://arxiv.org/pdf/2401.18059` |
+| 2 | **GraphRAG** (Edge et al., Microsoft, 2024) | PDF | ✅ | `https://arxiv.org/pdf/2404.16130` |
+| 3 | **ACID** (Li et al., 2023) | PDF | ✅ | `https://arxiv.org/pdf/2311.08593` |
+| 4 | **HIRO** (Hosking et al., TACL 2024) | PDF | ✅ | `https://aclanthology.org/2024.tacl-1.84.pdf` |
+| 5 | **LlamaIndex Doc Summary Index** (Jerry Liu, 2023) | 博客网页 | ⚠️ 无 PDF | 只有网页版，需要你自己浏览器打开读 |
+
+前四篇都是标准学术 PDF，arXiv 和 ACL Anthology 都是开放获取，直接点链接就能下。第五篇是博客文章，没有 PDF 版本，但内容不长，浏览器里读就行。
+
+要我帮你把这四个 PDF 下载到本地某个文件夹吗喵？
+
+═══ Vincent ═══
+
+好, 都给我下载下来, 放在myfiles里, 单独建一个文件夹是Unread放里面. 另外建一个是Read, 还有一个是"Notes"以及"Summaries"
+
+═══ 凌喵 ═══
+
+搞定喵。四篇全部下载到位，文件夹结构如下：
+
+<code block: 9 lines of unknown, 省略>
+
+读完哪篇移到 Read，笔记丢 Notes，要凌喵帮你做摘要就说一声放 Summaries 里喵。

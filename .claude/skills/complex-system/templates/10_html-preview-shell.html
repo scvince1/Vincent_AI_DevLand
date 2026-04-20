@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>HTML Preview · PROJECT_NAME V0</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; background: #fff; color: #111; }
+    nav { border-bottom: 1px solid #ccc; padding-bottom: .5rem; margin-bottom: 1rem; }
+    nav a { margin-right: 1rem; text-decoration: none; color: #0366d6; }
+    nav a.active { font-weight: bold; }
+    .page { display: none; }
+    .page.active { display: block; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: .4rem; text-align: left; }
+    button { padding: .4rem .8rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<script>
+// MOCK DATA. Replace with output of 03_backend/mock-data.json when Step 7.B2 produces it.
+// Structure mirrors the backend-spec.md data shapes.
+const MOCK_DATA = {
+  users: [
+    { id: "u1", name: "Mark", email: "mark@example.com" },
+    { id: "u2", name: "Sarah", email: "sarah@example.com" },
+    { id: "u3", name: "Li", email: "li@example.com" }
+  ]
+  // Add more entities as the design evolves.
+};
+</script>
+
+<nav>
+  <a href="#/home">Home</a>
+  <a href="#/users">Users</a>
+  <a href="#/about">About</a>
+</nav>
+
+<div class="page" id="page-home">
+  <h1>Home</h1>
+  <p>Replace with landing content as the design matures.</p>
+</div>
+
+<div class="page" id="page-users">
+  <h1>Users</h1>
+  <table>
+    <thead><tr><th>ID</th><th>Name</th><th>Email</th></tr></thead>
+    <tbody id="users-tbody"></tbody>
+  </table>
+</div>
+
+<div class="page" id="page-about">
+  <h1>About</h1>
+  <p>Replace with project description.</p>
+</div>
+
+<script>
+function render() {
+  const route = (location.hash || "#/home").slice(2);
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  const target = document.getElementById("page-" + route);
+  if (target) target.classList.add("active");
+  document.querySelectorAll("nav a").forEach(a => {
+    a.classList.toggle("active", a.getAttribute("href") === location.hash);
+  });
+  if (route === "users") {
+    const tbody = document.getElementById("users-tbody");
+    tbody.innerHTML = MOCK_DATA.users.map(u =>
+      `<tr><td>${u.id}</td><td>${u.name}</td><td>${u.email}</td></tr>`
+    ).join("");
+  }
+}
+window.addEventListener("hashchange", render);
+window.addEventListener("load", render);
+</script>
+
+</body>
+</html>

@@ -1,0 +1,248 @@
+═══ Vincent ═══
+
+本次session的工作重点是链接outlook的calendar和相关的todo功能(如果有的话)到这个meowos里
+
+═══ 凌喵 ═══
+
+项目背景已摸清。Dashboard 里已经记了两个 MCP 选项（Option A 只读本地 / Option B Graph API 完整 CRUD），也记录了你想要 calendar + todo 接入。
+
+先问最关键的一个问题：
+
+**接入后，你主要想做什么操作？**
+
+A. **只读**：每次 daily-review 时凌喵自动拉取今日/明日日历事件显示在 Dashboard，你只看不动
+B. **读 + 写**：凌喵可以帮你在 Outlook 里直接新建、修改、删除事件（比如"帮我明天上午 10 点加一个会议"）
+C. **以上都要，但分阶段**：先做只读，稳定后再加写入能力
+
+═══ Vincent ═══
+
+B
+
+═══ 凌喵 ═══
+
+好。写入能力确定了，走 Option B（Graph API）。
+
+**第二问：todo 这块你具体指的是哪个？**
+
+A. **Microsoft To Do**（Outlook 右侧或独立 App 里的任务清单）
+B. **Outlook Tasks**（邮件里 Flag 标记、Outlook 任务文件夹）
+C. **两个都要**
+D. **其实不需要 todo，只要 Calendar 就够了**
+
+═══ Vincent ═══
+
+D
+
+═══ 凌喵 ═══
+
+好，只做 Calendar。
+
+**第三问：你的 Outlook 账号是哪种类型？**
+
+A. **Microsoft 365 / 公司账号**（企业邮件，如 xxx@company.com）
+B. **个人 Microsoft 账号**（Outlook.com / Hotmail / Live，如 xxx@outlook.com）
+C. **混用**（个人账号 + 工作账号都在同一个 Outlook 里）
+
+═══ Vincent ═══
+
+B
+
+═══ 凌喵 ═══
+
+---
+
+## 三个方案
+
+### 方案 A — 直接用 `ryaker/outlook-mcp`（推荐）
+
+现成 MCP server，配置后挂进 Claude Code 的 `settings.json`。凌喵直接调用 MCP tool 读写 Outlook Calendar。
+
+**优点**：零开发量，Graph API 全功能（增删改查），社区维护  
+**缺点**：需要 Azure app 注册（约 15 分钟），个人账号的 OAuth redirect 需要本地处理  
+**配置复杂度**：中
+
+---
+
+### 方案 B — 自建轻量 MCP wrapper
+
+只包含凌喵真正需要的 3-4 个 tool（list_events / create_event / update_event / delete_event），直接调 Microsoft Graph API，不依赖第三方包。
+
+**优点**：完全可控，代码简单，容易 debug  
+**缺点**：需要写约 200 行 Python，维护责任在你  
+**配置复杂度**：高（开发 + Azure 注册）
+
+---
+
+### 方案 C — Microsoft Graph 官方 MCP Server
+
+微软最近发布了官方 MCP server（[microsoft/mcp](https://github.com/microsoft/mcp)），覆盖整个 M365 生态。
+
+**优点**：官方维护，最权威  
+**缺点**：目前仍在 preview，文档不完整，个人账号支持不稳定  
+**配置复杂度**：高（仍需 Azure + 配置复杂）
+
+---
+
+**推荐方案 A**：`ryaker/outlook-mcp` 是目前个人账号 + 读写需求最直接的路径，Azure 注册流程有标准步骤，不需要写代码。
+
+你倾向哪个？
+
+═══ Vincent ═══
+
+我不想搞azure或者单独维护的别的平台. 如果换成google calendar会有更简单的办法么?
+
+═══ 凌喵 ═══
+
+好问题。但说实话 **Google Calendar 也需要 Google Cloud Console 注册 OAuth app**，复杂度和 Azure 差不多。
+
+不过你提到不想搞云平台，有一条路我应该重新考虑：
+
+**你 Windows 上装了 Outlook 桌面客户端吗？**
+
+如果有的话，其实最简单的方案是 **直接用 Win32COM 操作本地 Outlook**——不需要 Azure、不需要 Google、不需要任何云端注册。`win32com.client` 可以直接读写本地 Outlook 日历，包括新建/修改/删除事件。你 Dashboard 里记的 Option A（`merajmehrabi/Outlook_Calendar_MCP`）只做了只读，但底层的 COM 接口是完全支持写入的。
+
+这条路的代价是：
+- 只能在你这台 Windows 机器上用（不是问题，MeowOS 本来就跑在本地）
+- 需要 Outlook 桌面端在运行
+
+要走这个方向吗？还是你确实想换到 Google Calendar 生态？
+
+═══ Vincent ═══
+
+装了啊. 没问题啊, 在本地用就可以了. 桌面端都是开机就启动的. 没有启动你给我启动一下不就好了
+
+═══ 凌喵 ═══
+
+## 设计
+
+### 架构
+
+一个本地 Python MCP server（`outlook-calendar-mcp`），通过 `win32com.client` 与 Outlook 桌面端通信，挂进 Claude Code 的 MCP 配置。凌喵通过 MCP tools 直接操作日历。
+
+### MCP Tools（4 个）
+
+| Tool | 功能 |
+|------|------|
+| `list_events` | 查询指定日期范围内的日历事件（默认今天+明天） |
+| `create_event` | 新建日历事件（标题、时间、地点、备注） |
+| `update_event` | 修改已有事件（按 EntryID 定位，改任意字段） |
+| `delete_event` | 删除事件 |
+
+### 技术细节
+
+- **语言**：Python + `pywin32`（`win32com.client`）
+- **MCP 协议**：用 `mcp` Python SDK（stdio transport）
+- **Outlook 未启动时**：COM 调用会自动启动 Outlook 进程，不需要额外处理
+- **日历访问**：`MAPI.GetDefaultFolder(9)` = 默认日历文件夹
+- **时区**：事件时间统一用美东时间（你当前时区）
+
+### 文件结构
+
+<code block: 4 lines of unknown, 省略>
+
+### 凌喵集成
+
+- 在 Claude Code settings 里注册这个 MCP server
+- 路由规则加一条：日程相关操作可调 MCP tool
+- daily-review agent 可自动拉取今日事件同步到 Dashboard
+
+---
+
+这个设计方向 OK 吗？有什么想调整的？
+
+═══ Vincent ═══
+
+几个问题：
+
+1. 我的电脑现在同时登录着好几个 email accounts 在 Outlook 里面，那你在添加的时候，这些 events 都是被添加到哪一个 account 里面的？
+
+2. 我在我自己的桌面端软件里面添加新的日程，或者修改现有的日程，它会修改掉你的任何东西吗？
+
+═══ 凌喵 ═══
+
+好问题。
+
+**Q1：多账号**
+
+`GetDefaultFolder(9)` 只访问默认账号的日历。但我们可以枚举所有账号，让你指定用哪个。两种做法：
+
+- **A）配置文件写死**：启动时指定一个账号（比如你的个人 outlook.com），所有操作都走这个
+- **B）每次可选**：`list_events` / `create_event` 加一个可选参数 `account`，不传就用默认
+
+你偏好哪种？还是说你日常只用其中一个账号管日程，其他账号的日历不需要管？
+
+---
+
+**Q2：双向冲突**
+
+完全不会。MCP server 是**无状态**的——它不维护任何本地副本，每次调用都是直接读写 Outlook 本身的数据。所以：
+
+- 你在 Outlook 桌面端改了事件 → 凌喵下次查的时候自动看到最新的
+- 凌喵改了事件 → 你在 Outlook 桌面端立刻能看到
+- 没有同步、没有缓存、没有冲突的可能
+
+═══ Vincent ═══
+
+那这个写进 Outlook 里的事件，比如说在手机端，或者在其他电脑上也装了同账号的 Outlook，它们能看到吗？
+
+═══ 凌喵 ═══
+
+能。
+
+Outlook 桌面端本身就跟 Microsoft 服务器同步。通过 COM 创建的事件和你手动在 Outlook 里创建的**完全一样**——它就是写进了 Outlook 的数据里，不是什么旁路操作。所以正常同步流程会把它推到服务器，手机端、网页版、其他电脑都能看到。
+
+反过来也一样，手机上加的事件同步下来后，凌喵也能读到。
+
+还有其他问题吗？没有的话我开始写 spec 了。
+
+═══ Vincent ═══
+
+跳过spec吧, 直接approve
+
+═══ 凌喵 ═══
+
+I'm using the writing-plans skill to create the implementation plan.
+
+Let me first check the existing setup to write accurate paths and configs.
+
+═══ Vincent ═══
+
+继续
+
+═══ 凌喵 ═══
+
+Plan 写完了，保存在 [2026-04-07-outlook-calendar-mcp.md](docs/superpowers/plans/2026-04-07-outlook-calendar-mcp.md)。
+
+**6 个 Task：**
+1. 项目初始化 + 安装 pywin32/mcp
+2. COM wrapper（list/create/update/delete）
+3. MCP server（5 个 tools）
+4. 注册到 Claude Code settings
+5. 更新路由规则 + Dashboard
+6. 清理测试文件
+
+**两种执行方式：**
+
+1. **Subagent-Driven（推荐）** — 每个 task 派一个独立 agent 执行，之间有 review checkpoint
+2. **Inline Execution** — 在当前 session 里逐步执行
+
+选哪个？
+
+═══ Vincent ═══
+
+1.
+
+═══ 凌喵 ═══
+
+全部 6 个 Task 完成。
+
+**交付物：**
+- [server.py](mcp-servers/outlook-calendar/server.py) — MCP server，5 个 tools
+- [outlook_com.py](mcp-servers/outlook-calendar/outlook_com.py) — Win32COM wrapper
+- [requirements.txt](mcp-servers/outlook-calendar/requirements.txt) — 依赖清单
+- 项目级 settings.json 已配置 MCP server
+- 路由规则已更新，Dashboard 已标记完成
+
+**要用的话，需要重启这个 Claude Code session**，新 session 里 MCP server 就会自动连接。到时候凌喵可以直接调用 `list_calendar_events`、`create_calendar_event` 等 tool 来操作你的 Outlook 日历。
+
+要现在重启测试一下吗？

@@ -1,0 +1,44 @@
+# Emdash worker session state (per-worktree)
+.claude/
+
+# Node
+node_modules/
+dist/
+.next/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Databases (local dev only; exclude from repo)
+*.db
+*.sqlite
+*.sqlite3
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+build/
+out/
+coverage/
+
+# Pipeline state (push_tickets.py cache, if any)
+pipeline/.cache/

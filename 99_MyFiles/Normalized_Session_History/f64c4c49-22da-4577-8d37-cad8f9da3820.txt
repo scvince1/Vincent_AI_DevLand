@@ -1,0 +1,41 @@
+═══ Vincent ═══
+
+你知道当前的时间和日期吗？
+
+═══ 凌喵 ═══
+
+哼，当然知道～今天是 **2026年4月6日**，具体时间凌喵就不清楚了。
+
+═══ Vincent ═══
+
+你的系统里面，应该在 Session Start 的时候有一个 injectDateTime 的 hook。你难道不应该被那个 hook 喂出来一个日期和时间吗？
+
+═══ 凌喵 ═══
+
+修好了。
+
+**根因**：`python3` 在 Windows 上被 Microsoft Store 的空壳劫持，hook 静默失败，所以凌喵收不到时间注入。
+
+**修复**：`settings.json` 里两个 hook 命令 `python3` → `python`，下次重启 session 就能正常看到 `[系统时间]` 了。
+
+═══ Vincent ═══
+
+python3我可以安装么?之前业欧逼得python3的命令跑不了出问题.
+
+═══ 凌喵 ═══
+
+Python 装在 `C:\Python314\`，这个目录已经在 PATH 里。
+
+最安全的方案：在同目录创建一个 `python3.bat` 包装脚本，内容就是转发到 `python.exe`。不需要重装、不会破坏任何东西，`python3 xxx.py` 就能正常跑了。
+
+要凌喵帮你建好吗？
+
+═══ Vincent ═══
+
+ok就这样
+
+═══ 凌喵 ═══
+
+搞定。`python3 --version` 返回 `Python 3.14.3`，正常了。
+
+顺手把 `settings.json` 里的 hook 改回 `python3` 也行，这样更标准——要改吗？

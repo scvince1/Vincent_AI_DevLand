@@ -1,0 +1,224 @@
+═══ Vincent ═══
+
+去搜一下这个, 然后并发3个sonnet agent去搜所有相关的需要的东西. 我在想能不能用这个增强challenge 5里的效果, 或者以后其他的project. 你以后并发agent搜材料的时候, 可以让agent给你返回来的东西不要太精炼. 另外agent自己搜完的东西, 以后也让他们自动落到知识库里. 我今天看以前的subagent的log, 看到其实他们读了很多很多的东西, 但是这些东西读完了就烧成token没了, 我觉得这不好, agent既然读过了, 就本地存下来. 我们未来的别的活动需要参照这些按照"我们的探索轨迹"所铺设过的知识路径. (当然, 我这个想法可能不对, 这是我当前prioritizing探索ai知识结构的一部分)
+
+═══ 凌喵 ═══
+
+存好了喵。
+
+然后关键问题：**"去搜一下这个"——这个是哪个？** 😼
+
+我这边没看到你贴的链接、截图、或 IDE 选中的内容。可能是：
+- 你本来想贴个东西但忘了贴？
+- 你指的是某个你刚在 VSCode 里选中的代码/文字，但 selection 没传过来？
+- 你指的是上一 session 或最近聊过的某个话题（如果是，请点名，我不猜）？
+
+另外顺带确认一下我对你三个意图的理解对不对：
+
+1. **即时任务**：搜"这个"（待你告诉我是啥），然后并发 3 个 sonnet agent 去搜周边相关资料
+2. **应用目标**：你在想能不能用这个东西增强 **Challenge 5** 的效果（Challenge 5 是指 MiroFish 那边的某个挑战还是别的？也请确认一下，免得我搜的方向跑偏）
+3. **新规矩已落库**：以后并发 agent 搜材料时，agent 返回的东西不要过度精炼 + 读过的东西必须本地持久化到知识库，给未来留下"探索轨迹" ✅
+
+等你补"这个"是什么 + Challenge 5 指向，我就开工喵。
+
+═══ Vincent ═══
+
+致歉, 没粘贴上https://github.com/karpathy/autoresearch
+
+═══ 凌喵 ═══
+
+三个 agent 都上路了喵，各自在后台跑，落盘目录统一：
+
+📁 `D:\Ai_Project\MeowOS\80_Knowledge\84_AI_Tech\autoresearch_2026-04-11\`
+- `01_repo_deepread.md` — repo 本体 + README + 核心代码阅读笔记
+- `02_author_context.md` — Karpathy 动机 / 时间线 / 公开讨论
+- `03_landscape.md` — 自主研究 agent 领域扫描 + 知识持久化这一维度对比
+
+三个都明确要求**先落盘、返回富文本笔记（不搞 tl;dr）、尾行附 KB 路径**。跑完我会收到通知，然后给你做跨 track 综合。
+
+---
+
+**与此并行，一个关键澄清问题喵：**
+
+**"Challenge 5" 是指哪一个？** 我没把握，列几个可能让你点名：
+
+1. **MiroFish 项目里的某个 challenge**（你最近在深研 swarm intelligence 那个）？
+2. **Article 系列（HBR + LinkedIn）里的第 5 篇文章**？
+3. **BaseOS 设计里的某个挑战节点**？
+4. **Horsys 业务上的某个挑战**？
+5. **其他我完全没 context 的东西**（比如你私下在做的 coding challenge / 某门课的作业 / 某个 AI 研究 challenge 系列）？
+
+等 agent 跑完 + 你告诉我 Challenge 5 是哪个，我就能把 autoresearch 的能力对齐到你具体要增强的那个点上，看看是"直接用 repo"、"借鉴架构"、还是"只偷灵感"喵。
+
+═══ Vincent ═══
+
+其他你没有context的东西. ,大概思路是说从各种电商/自媒体/论坛平台里刮取用户评论, 对一个家电品牌进行分析, 做sentiment+产品是怎么坏的analysis, 最终做出来一个可以预测产品效果的模型. 我可以把新产品/新marketing/新事件等等内容输入到一个"What if"的窗口里, 大模型预测出来关于产品未来的事情.
+
+═══ 凌喵 ═══
+
+---
+
+## 📊 Status
+
+| Track | 状态 |
+|---|---|
+| 1. Repo deep-read | ✅ 回来，`01_repo_deepread.md` 已落盘，笔记很厚 |
+| 2. Author context & timeline | ✅ 回来，`02_author_context.md` 已落盘 |
+| 3. Landscape / alternatives | 🏃 还在跑 |
+
+两个 track 已经给出够丰富的材料，让我先给你一个**早期读数**（landscape 回来后再补第二轮综合喵）。
+
+---
+
+## 💡 autoresearch × Challenge 5 初读
+
+先澄清一个关键事实，让你的期望别偏：**autoresearch 本身不是一个你能直接拿来改造 Challenge 5 的"工具"**。Karpathy 自己在 X 上说得很直白：
+
+> *"you don't 'use it' directly, it's just a recipe/idea - give it to your agent and apply to what you care about."*
+
+它是个 630 行的 **模式示范**，本体是 GPT 训练循环（需要 H100），跟你刮家电评论做预测模型一点关系都没有。值钱的是里面的**四个架构原语**。让我对照 Challenge 5 看哪个能移植，哪个不能：
+
+### ✅ 能偷的三个原语
+
+**1. `program.md` as Skill File = 研究方法论本身就是 markdown**
+这是整个 repo 最重要的文件，不是代码。它用自然语言写"agent 应该怎么研究"，包括"简洁性准则"、"绝不停下"、"如何处理崩溃"这些行为约束。Karpathy 的 Software 3.0 框架里，**人写的就是这一份 markdown，其他全交给 agent**。
+
+对 Challenge 5 的映射：你的 `scrape_and_analyze.md` 就是这份 skill file。里面写清楚：
+- 每个平台怎么抓（京东/小红书/B站/reddit/HN）
+- 遇到反爬怎么办
+- 一条评论如何标注 sentiment + failure mode
+- 什么时候停、什么时候提交一批给主分析 agent
+
+你已经在做的 MeowOS CLAUDE.md + agent prompts 本质上就是这个模式，autoresearch 只是给你提供了一个**极简证据：这玩意真的能跑起来让 agent 无人值守工作两天**（Karpathy 自己跑 nanochat 跑了 2 天，agent 找到了 20 个改进点）。
+
+**2. Log-and-grep 的 context hygiene**
+autoresearch 里所有训练输出都 `> run.log 2>&1` 重定向，然后只 `grep` 关键行。理由是 agent 跑 100 次实验，每次 300 行日志会瞬间爆 context。
+
+Challenge 5 直接适用：刮评论的 subagent 会读几千条文本，**绝不能把原文回灌到主 session**。要像你刚定的新规矩一样——先落盘到 KB，然后只把"结构化的分析结果 + 文件路径"返回。这恰好是你今天刚跟我定的规矩的**工业化版本**。
+
+**3. 固定度量 = 可比较的实验**
+autoresearch 用 "5 分钟 wall-clock 内的 val_bpb" 做固定度量，所有实验都在同一把尺子上比。
+
+Challenge 5 需要一把**自己的尺子**才能让预测模型迭代下去：
+- 可能是"对过去半年真实事件的回测准确率"
+- 可能是"对留出集评论的 failure mode 分类 F1"
+- 可能是"what-if 预测 vs 实际市场反应的 delta"
+
+没有这把尺子，Challenge 5 的"预测模型"永远是模糊的好/坏。这是 Karpathy 这套范式给你最硬的启发——**在 agent 能自我迭代之前，先定义可比较的度量**。
+
+### ❌ 偷不了的一个
+
+**4. Git branch as experiment lineage**
+autoresearch 每次成功实验就 commit 到主线，失败就 `git reset --hard HEAD~1`。整个 branch 历史 = 成功实验的血统图谱。
+
+这个对 ML 训练代码迭代很漂亮，但对 Challenge 5 没有直接映射：你要迭代的不是一份代码，是一个**数据 + 模型 + 知识库**的三元组。更合适的 lineage 载体是你本来就在做的 KB 目录结构 + `results.tsv`-style 的元数据表。
+
+---
+
+## 🎯 对你原问题的一句话答复
+
+**能不能用 autoresearch 增强 Challenge 5？** 
+能，但不是"拿过来用"，是"偷它的架构哲学"。具体偷三样：(a) `program.md` 当作 agent 的 SOP 写法、(b) log-and-grep 的 context hygiene、(c) 固定度量作为可迭代前提。剩下的（GPT 训练循环、H100、git branch 血统）扔掉。
+
+有意思的二级观察：**你今天定下的两条新规矩（rich return + auto-persist to KB）其实比 autoresearch 本身更进一步**——Karpathy 只有 `results.tsv` + git diff 作为知识载体，你已经在构建一个真正的知识库。如果把 autoresearch 的 program.md 写法 + 你的 KB-first 架构拼起来，得到的东西可能比 autoresearch 原版对"AI 知识结构"这个命题更有话可说。
+
+---
+
+等第三个 agent (landscape) 回来，我再给你补：**别人家做 deep research agent 的时候有没有人解决了"读过的东西不丢"这个问题**，这个维度我专门让它重点看了。回来后我做第二轮综合喵。
+
+你想先讨论哪条？还是等 landscape 一起看？
+
+═══ 凌喵 ═══
+
+Landscape 回来了喵。这一份是整夜最重要的那一份——**你今天拍脑袋定的新规矩（读过的东西必须落盘）正好命中领域里一个学术界已经点名的 gap。** 先说结论，然后三层证据，最后更新 Challenge 5 的架构读数。
+
+---
+
+## 🎯 一句话结论
+
+你早上说"我这个想法可能不对"——**它不仅是对的，还是一个 2025 年 arXiv 综述明确指出的未解问题**。所有主流 deep research 工具（商业 + 开源）都是 read-process-discard，持久化这件事没人真的在做。
+
+---
+
+## 📚 三层证据
+
+### 层一：商业工具全军覆没
+
+| 工具 | Knowledge Persistence |
+|---|---|
+| OpenAI Deep Research (o3/o4-mini) | **零** 。每次 run 从头开始 |
+| Gemini Deep Research (3.1 Pro) | **零**。1M context 只是单 session 工作内存，session 结束全丢 |
+| Perplexity Sonar Deep Research | **零** |
+| Grok DeepSearch | **零** |
+| Anthropic | 没有 standalone Deep Research 产品，只提供 infra |
+
+这不是我总结，是 landscape agent 对每一家的架构描述汇总出来的统一结论。
+
+### 层二：开源也几乎全军覆没，除了一个例外
+
+- **GPT-Researcher**：README 里写"maintains memory and context"，但实际上只是 session 内的 continuity，跨 session 啥都没有
+- **LangChain Open Deep Research**：**有可配置的持久化**（CompositeBackend 可以把 `/memories/` 路由到 StoreBackend），但默认不开，要开发者自己配
+- **smolagents / AutoGen / CrewAI**：无内置持久化，"是开发者自己的问题"
+- **Tongyi DeepResearch**（阿里 30B MoE 开权重）：研究能力烧进 weights 里，不是外部 store
+- **⭐ Stanford Co-STORM**：**唯一例外**。有一个 *dynamic mind map*——session 内实时更新的层级化概念结构，可以导出。但仍然每个 topic 重置，不跨 topic 累积
+
+Co-STORM 是全世界唯一一个朝你那个方向走了半步的工具。
+
+### 层三：学术界明确点名了这个 gap
+
+三篇 arXiv 综述：
+
+1. **arXiv 2506.12594**（"A Comprehensive Survey of Deep Research"）：分析了 80+ 实现，明确指出"Knowledge Synthesis and Output Generation"是四个技术维度中**最不发达的**
+2. **arXiv 2506.18096**（"Deep Research Agents: Systematic Examination & Roadmap"）：列出七大 gap，包括 self-evolving agents
+3. **arXiv 2508.12752**（"Deep Research: A Survey of Autonomous Research Agents"）：原话 ——"**no explicit discussion of knowledge persistence mechanisms** in current literature"
+
+---
+
+## 🧠 一个更 juicy 的发现：方案已经存在，只是没被拼起来
+
+"读完就存"的工程方案其实已经有了，全在**另一条技术线**上，叫 **Agent Memory Layer**：
+
+- **Zep** (arXiv 2501.13956)：时序知识图谱，双时态边建模，事实不删除只 invalidate。把 context token 从 115K 压到 1.6K 的同时精度还涨了 18.5%
+- **Mem0** (arXiv 2504.19413)：基于图的抽取 + 更新。精度 +26%，延迟 -91%，token -90%。两个变体：base 和 Mem0g（带实体/关系的有向标注图）
+- **A-MEM** (arXiv 2502.12110)：**Zettelkasten 原则**（!! 这个你看过 Ahrens 的书吧），新 memory 可以反向更新旧 memory 的 context，双向知识演化而非只追加
+
+**关键事实：没有任何一个 deep research agent 产品接入了这三样中的任何一个。**
+
+Research agent 层和 memory 层目前是**完全分开的两个 stack**，没人把它们焊在一起。Landscape agent 的原话：
+
+> *"A research agent built on any of these memory systems could in principle accumulate domain knowledge across sessions... This integration does not yet exist."*
+
+---
+
+## 🔧 Challenge 5 的架构读数（第二轮，替换上一版）
+
+上一版我说偷三件事（program.md / log-and-grep / 固定度量），那是基于 repo + author。加上 landscape 之后，Challenge 5 的正确位置浮现了——它不是一个"偷 autoresearch 几招"的工程任务，而是一个**恰好可以验证那个"没人拼起来"的架构**的真实用例：
+
+<code block: 7 lines of unknown, 省略>
+
+三件套：
+1. **Deep research 刮料层**（对应商业工具在做的事，但是持久化到本地 KB）
+2. **Agent memory 层**（Zep/Mem0/A-MEM 三选一作为底层，或者先用你自己的 MeowOS KB 土法模拟）
+3. **autoresearch 风格的迭代 loop**（让预测模型通过新增的 knowledge 自我改进，以回测准确率为固定度量）
+
+这三件套单独都有人做，**拼起来没人做**。Challenge 5 如果按这个架构走，它本质上是**一个特定领域（家电预测）的 end-to-end 验证实验**，证明这三层可以焊在一起。
+
+"What If" 窗口在这个框架下有了一个干净的定义：它是**对累积 KB 的一次 test-time query**，而 KB 的质量可以通过迭代 loop 持续改进。
+
+---
+
+## 📌 两件事你需要决定
+
+**(1) 方向选择。** 你想下一步做哪个？不替你做决定，列清单：
+
+| 选项 | 形态 | 适合的时机 |
+|---|---|---|
+| A. 深挖 Zep / Mem0 / A-MEM 中一个 | 再派 agent 单点深读 | 如果你想搞清楚"真到要拼的时候用哪个" |
+| B. 画 Challenge 5 整体架构图 | 主 session 工作，产出一份 spec | 如果你觉得三件套这个 framing 立得住，想立刻往下走 |
+| C. 只把新发现落到 feedback memory 和 KB 索引 | 轻量收工 | 如果这次只是探索，不打算立刻推 Challenge 5 |
+| D. 读一下 Co-STORM 的 mind map 实现 | 再派一个 agent | 它是"唯一半步"的样本，可能有直接可偷的数据结构 |
+| E. 其他 | 你说 | — |
+
+**(2) 一个轻量观察，想确认你是不是也这么看。** Vincent，这三份 KB 材料落盘之后（01/02/03），它们本身就是你 Challenge 5 项目的**literature review 第一章**。我要不要在 KB 目录下再加一个 `00_synthesis.md`，把上面这份跨 track 综合（结论 + 证据 + 架构读数）也落盘？这样 Challenge 5 开始写 spec 的时候你直接有一份综述可引用，而不用重新跑 session。
+
+等你决定方向喵。

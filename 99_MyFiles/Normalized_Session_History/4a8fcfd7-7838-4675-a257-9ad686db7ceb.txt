@@ -1,0 +1,305 @@
+═══ Vincent ═══
+
+帮我记一些我最近的待办事项，目前主要有这么几个大的业务分支：
+
+1. Belmont Equine International（卖马和 Horses 相关业务）
+   (a) 追踪比赛和处理其他杂事
+   (b) 目前优先级是查马的赛事，并督促 Niki 去参赛，寻找其他的 options
+   (c) 在常规 Marketing 之外发展新的营销方案
+   (注：这部分的事情我之后会在 Horses 文件夹里单独记录)
+
+2. 担任 SharkNinja CEO Chief of Staff Joyce 的 PTA
+   (a) 帮她做 Tech Demo目前的 AI 解决方案需要是一个 Agentic 的 workflow
+   (b) 搭建她个人的 Personal AI System
+
+3. 进出口贸易（主营业务是编子）
+   (a) 目前暂时不考虑开发别的东西
+   (b) 搭建 SC 的店铺
+   (c) 把 Social Media 运营起来
+
+4. 找工作
+   我想办法自己找工作，主要分成两个部分：
+
+   (a) 修改简历与投递
+       计划将为 CEO 和 Chief of Staff 做 PTA 的这部分经历，整合到 Belmont 的简历事项中。
+
+   (b) 提升 AI 相关技能
+       - 尽可能快地学明白 AI 的 implementation（实现方案），为未来的 hack 做好准备。
+       - 需要多跟 AI 一起 brainstorm，思考如何在团队（team）中应用这些技术。
+       - 了解前沿新技术，并对 programming 或 architecture（架构）的大思路进行深入思考。
+
+要把这一块内容处理好。
+
+═══ 凌喵 ═══
+
+Dashboard 已更新，四个 initiative 全部录入：
+
+**🐴 Belmont Equine International**（详情归 Horsys 文件夹）
+- 🔴 查 Niki 赛事日程、督促参赛
+- 🟡 找其他参赛 options、追踪赛事、新营销方案
+
+**🤖 Joyce PTA**
+- 🔴 Tech Demo：Agentic AI workflow
+- 🟡 Joyce Personal AI System
+
+**📦 进出口贸易（编子）**
+- 🔴 搭建 SC 店铺
+- 🟡 Social Media 运营
+
+**💼 找工作**
+- 🔴 整合 PTA 经历进简历 + 投递
+- 🟡 AI implementation 学习、brainstorm 团队应用、跟进前沿技术
+
+记忆库也同步更新了，下次对话凌喵不会忘记你的背景。有什么需要调整的吗，Vincent？
+
+═══ Vincent ═══
+
+从现在开始到未来的五个小时以内，我需要完成以下事项的规划和执行：
+
+1. Joyce 的 Tech Demo 搭建（核心任务）：
+   (a) 跑通 Tech Demo 并设计好 Prompt
+   (b) 搞清楚 Tool 的具体操作逻辑
+   (c) 解决基本的 QA 问题
+   (d) 针对 Agent 和 Compact 解决方案的区别，进行详实的解释
+   (e) 最终做出一个“宝宝版” Demo，方便之后带着大家 hand in hand 地 walk through
+
+2. 待处理的电话与杂项（预计总预留时间）：
+   (a) 给保险公司打电话（预计 1 小时）：询问关于保险和车的问题。由于大部分时间在排队等待，期间可以同步处理别的事。
+   (b) 给 Autopsy 打电话（预计 15 分钟）
+   (c) 给 Collision Center 打电话（预计 10 分钟）
+
+3. 个人休息与生活：
+   (a) 补觉：我昨天一晚上没睡，忙完 Joyce 的事情后需要先睡个觉，预计至少睡 6 小时左右。
+   (b) 锻炼：今晚留 1 小时锻炼。不过我锻炼时容易磨蹭，时间不太准，可能练不到 1 小时就回来，也可能一去就是 2 小时。
+   (c) 娱乐：今天拿出一个到一个半小时打游戏。
+
+4. 职业与个人项目：
+   (a) 找工作：希望投入一个到一个半小时左右。
+   (b) 搭建店铺：这块我自己不太会弄，可能要找一个 session 用 brainstorming 的方式搞一下。
+   (c) 赛事日程：今天要花时间把这个跑出来，预计半小时到一小时。
+
+能帮我 track 一下这些事项的时间是最好的。这是我第一次用这个系统，我们就一边用一边改。4. AI Implementation：
+   (a) 我记得之前看到过一个帖子，有一个网站可以处理这件事。
+   (b) 已经有人设计好了相关的 prompt 和 skills，或者可以通过订阅等方式每天自动 fetch 行业新闻。
+   (c) 我需要抽时间去 step by step 地研究一下。这件事不一定今天干，可能需要花一段时间。
+
+═══ 凌喵 ═══
+
+现在几点了，Vincent？需要知道起始时间才能排进日程。
+
+在你回答之前，先给你看草案框架——确认时间后写入 Dashboard。
+
+---
+
+**五小时 Block（Joyce + 电话）**
+
+| 阶段 | 内容 | 备注 |
+|------|------|------|
+| T+0 → T+2 | Joyce Demo：跑通流程 + Prompt 设计 + Tool 逻辑 | 核心深工作，不被打断 |
+| T+2 → T+3 | Joyce Demo：QA + Agent vs Compact 解释 ← 同步打**保险电话** | 排队等待时继续敲键盘 |
+| T+3 → T+3:15 | Autopsy 电话 | |
+| T+3:15 → T+3:25 | Collision Center 电话 | |
+| T+3:25 → T+5 | Joyce Demo：收尾 + 宝宝版 Demo 整理 | |
+
+**五小时之后（不排精确时间，按序走）**
+
+| 事项 | 预计时长 | 优先级 |
+|------|--------|--------|
+| 补觉 | 6 小时 | 🔴 立刻 |
+| 赛事日程（Niki） | 30–60 分钟 | 🔴 今天完成 |
+| 找工作 | 1–1.5 小时 | 🟡 |
+| 锻炼 | ~1 小时（弹性） | 🟡 |
+| 打游戏 | 1–1.5 小时 | 🟢 |
+| 搭建店铺 | 单独 brainstorm session | 📌 另约时间 |
+
+**AI Implementation 研究** → 今天不动，另找 session 专门 step-by-step 研究。先记在 Todo 里。
+
+---
+
+报个时间，我来填表写进 Dashboard。
+
+═══ Vincent ═══
+
+现在是美东时间 2026年4月6日 早上 6:25
+
+═══ 凌喵 ═══
+
+写好了。今天的时间线：
+
+<code block: 11 lines of unknown, 省略>
+
+两个提醒：
+- **搭建店铺** 已标注"需单独 brainstorm session"，今天不动
+- **AI 行业资讯方案**（你说的那个网站）加进 Todo 了，不急，另找时间
+
+去干活吧，Vincent，加油。
+
+═══ Vincent ═══
+
+不对，不能这样。
+
+Joyce 现在在机场，飞机 11 点多落地。我会在她落地之前把活干完，干完之后我就直接去睡觉，不会等她。
+
+关于日程安排：
+1. 别的电话都往后排，排到我睡醒后再说。
+2. 电话最好能排在 4:00 及 4:00 以前。
+   (a) 主要是保险公司的电话，如果排到 4:00 以后他们就下班了。
+   (b) 你看如果保险电话必须在 4:00 前处理，我睡觉的时间需要压缩到什么时候？
+
+后续计划：
+1. 那个 Demo 我可以干快一点。
+2. 我现在还需要 20 分钟左右的时间，处理一下我那个 Personal AI System 的东西。
+3. 我还有一摊事，是对现有的 Personal AI System 进行升级、处理和优化。
+
+═══ 凌喵 ═══
+
+明白了。先把约束算清楚再排表。
+
+---
+
+**睡眠压缩计算**
+
+保险公司的电话需要 1 小时，如果他们 4 点关门，你最迟得 **3:00 PM** 开始打。
+
+| 你什么时候完工 | 最多能睡多久 |
+|---------------|-------------|
+| 11:00 AM | **4 小时**（11:00 → 15:00） |
+| 10:00 AM | **5 小时**（10:00 → 15:00） |
+| 09:30 AM | **5.5 小时**（09:30 → 15:00） |
+
+理想是 6 小时，但要在 4 点前打完保险电话，最多只能睡到 **5 小时**（需要 10 点前完工）。
+
+---
+
+**现在需要你确认一件事**
+
+第 3 条"对 Personal AI System 进行升级和优化"——这是**今天**要做的事，还是另找 session？大概要多久？
+
+这个答案决定你能不能在 10 点前收工。
+
+═══ Vincent ═══
+
+保险公司在 4 点之前开始打就可以，因为他们 5 点钟关门。我如果打太晚了，他们可能就准备下班了。
+
+关于对 AI System 的优化，我正在处理，大概用 10 到 20 分钟稍微搞一下就行。这个优化肯定是长期的，我今天现在主要的工作是：
+1. 把 memory 的 folder 改完
+2. 开始做一个分类
+
+这样就可以了。
+
+═══ 凌喵 ═══
+
+好，重新算，可以睡满 6 小时。
+
+**关键节点：10:00 AM 完工 → 睡到 4:00 PM → 4:00 打保险电话**
+
+---
+
+**修订草案（待确认后写入 Dashboard）**
+
+| 时间 | 事项 |
+|------|------|
+| 06:25 – 06:45 | PA System：memory folder + 分类（你正在处理） |
+| 06:45 – 09:45 | Joyce Tech Demo（全速，3 小时） |
+| 09:45 – 10:00 | 收尾 buffer |
+| **10:00 – 16:00** | **补觉（6 小时）** |
+| 16:00 – 17:00 | 保险电话 |
+| 17:00 – 17:15 | Autopsy 电话 |
+| 17:15 – 17:25 | Collision Center 电话 |
+| 17:30 – 18:30 | Niki 赛事日程 |
+| 18:30 – 20:00 | 找工作 |
+| 20:00 – 21:30 | 锻炼（弹性） |
+| 21:30 – 23:00 | 打游戏 |
+
+三小时能搞定 Demo 吗？确认一声，我就写进去。
+
+═══ Vincent ═══
+
+可以。你能脸上我的calendar么
+
+═══ 凌喵 ═══
+
+"脸上"是打错了——你是想说**接上**（连接到）你的 calendar 吗？
+
+目前我没有 calendar 的访问权限。要接上的话，需要知道：
+
+**你用的是哪个日历？**
+- Google Calendar
+- Apple Calendar（iCloud）
+- Outlook / Microsoft 365
+- 其他
+
+确认后可以看看有没有对应的 MCP 集成方案能接上来。
+
+═══ Vincent ═══
+
+outlook
+
+═══ 凌喵 ═══
+
+可以接，有两个选项：
+
+**选项 A — 本地 Outlook（更简单，Windows 专属）**
+[merajmehrabi/Outlook_Calendar_MCP](https://github.com/merajmehrabi/Outlook_Calendar_MCP) — 直接读取本地 Outlook，无需 OAuth，但功能有限（主要是查看事件）。
+
+**选项 B — Microsoft Graph API（功能完整）**
+[ryaker/outlook-mcp](https://github.com/ryaker/outlook-mcp) — 支持增删改查日历事件，但需要在 Azure 注册应用、走 OAuth 流程，配置稍复杂。
+
+---
+
+不过 Vincent，现在是 6:30 AM，你还有 3.5 小时要搞定 Demo。
+
+**这个 calendar 接入要现在弄，还是睡醒后再说？** 配置大概需要 15-30 分钟，不是今天的紧急事项。
+
+Sources:
+- [merajmehrabi/Outlook_Calendar_MCP](https://github.com/merajmehrabi/Outlook_Calendar_MCP)
+- [ryaker/outlook-mcp](https://github.com/ryaker/outlook-mcp)
+
+═══ Vincent ═══
+
+这个在 Dashboard 上挂起吧，给我留一个简短的 prompt，方便我下一个 session 直接 copy paste 过来，就知道怎么干这个事情了。
+
+我可以直接 copy paste 进来，开始干这个事情。
+
+═══ 凌喵 ═══
+
+挂上了。Dashboard 里新增了"⚙️ 凌喵系统"板块，prompt 直接放在那，下次 session 开头 paste 进来就能继续。
+
+去干活吧，Vincent，时间不多了。
+
+═══ Vincent ═══
+
+特别棒，你这个提醒得特别对。最后多提一嘴，给我的 initiatives 里面再补一部分“小说设计模块”。
+
+这个模块除了完善设定以外，目前在做的还有：
+1. 了解期货期权及其在小说里面的 implication
+2. 给灵妙系统也补一句：在某个时候，我需要想办法建立它调动我其他几个系统内 dashboard 的能力。我希望最后这个系统的 dashboard 是类似于一个大汇总，但属于 slightly higher level 的那种。
+
+═══ 凌喵 ═══
+
+搞定。两处都加了：
+
+- **📖 小说设计模块**：完善设定 + 期货期权研究
+- **⚙️ 凌喵系统**：新增一条——跨系统 dashboard 汇总能力（higher-level 大汇总视图）
+
+好了，现在真的去干活了，Vincent。
+
+═══ Vincent ═══
+
+你的这个最后修缮没有把 Dashboard 的日程表给更新了呀。
+
+我现在已经睡醒了，要开始给保险打电话了。
+
+═══ 凌喵 ═══
+
+你现在几点睡醒的？需要知道实际时间才能把日程表改准。
+
+同时告我一下：Joyce Demo 那几个 block 是都完成了吗？
+
+═══ Vincent ═══
+
+四点16
+
+═══ 凌喵 ═══
+
+更新完了。**现在去打保险电话，还有 44 分钟。**

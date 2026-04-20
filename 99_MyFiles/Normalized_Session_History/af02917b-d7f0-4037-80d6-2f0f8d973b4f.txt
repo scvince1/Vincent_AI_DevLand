@@ -1,0 +1,9 @@
+═══ Vincent ═══
+
+do you have access to team creates?
+
+═══ 凌喵 ═══
+
+有喵。`TeamCreate` 和 `TeamDelete` 都在 deferred tools 列表里，schema 没预加载，需要先用 `ToolSearch` 查询（例如 `select:TeamCreate,TeamDelete`）把 schema 拉进来才能调用。
+
+要我现在加载它们的 schema 吗？还是文森特想做点具体的事喵？

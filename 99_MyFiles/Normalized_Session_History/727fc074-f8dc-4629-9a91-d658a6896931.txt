@@ -1,0 +1,605 @@
+═══ Vincent ═══
+
+我现在要在隔壁session里部署agentic teams, 去对SharkNinja 的一个竞赛需求进行开发. 项目名称" Consumer Sentiment Dashboard: Social Listening MVP" 需要Scrape publicReddit, TikTok,and Amazon review data for a defined product category. Apply NLP sentiment analysis and build a working insight dashboard. 这个最终deliverable需要能兼具预测和实时scraping的能力, 所需要跟踪的产品也包含了SharkNinja和竞品品牌的产品. 我需要 specify 出来每一个 agent 处理哪些 specific files，以确保它们不会 overwrite 彼此的 crucial partial process files。
+
+我也需要在这里 define 所有 agents 的 output。与其让 model 为我 hallucinate 这些输出，我需要明确 name the recipients of the files。相比于 assume a workflow 和 assume a plan，我需要这个团队由三到五个 teammates 组成。
+
+在这种情况下，我该如何设计这个 agentic team setup？
+
+═══ 凌喵 ═══
+
+好喵，Vincent。看了一下你现在的setup——已经有三个agents（business-leader, code-auditor, competitive-researcher），teams flag也开了。
+
+在我开始设计之前，第一个关键问题：
+
+**这个项目的代码仓库会放在哪里？** 是在 `D:\Ai_Project\` 下新建一个独立项目目录（比如 `D:\Ai_Project\SharkNinja\`），还是你已经有一个repo了？
+
+这决定了file ownership mapping的根路径，以及agents的工作目录隔离方式喵。
+
+═══ Vincent ═══
+
+这三个agent的session会马上被关掉然后重新做. 这是个第一次workflow迭代的中间产物不用管. 放在MyFiles里面Project_Trial之下, 新建一个Challenge_5_v2
+
+═══ 凌喵 ═══
+
+明白喵。项目根路径确定了：`D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\`
+
+下一个问题：
+
+**你打算怎么部署这个dashboard的前端？** 具体来说：
+
+- **A)** Python全栈（Streamlit / Dash / Gradio）——快速出MVP，单语言
+- **B)** 前后端分离（FastAPI + React/Next.js）——更professional，但工作量大
+- **C)** Jupyter Notebook + 静态可视化——最轻量，适合演示但不是"working dashboard"
+
+考虑到这是竞赛deliverable需要"working insight dashboard"，你倾向哪个方向喵？
+
+═══ Vincent ═══
+
+A和B给我解释下我没懂区别
+
+═══ 凌喵 ═══
+
+简单说喵：
+
+**A) Python全栈** — 一个Python文件跑起来就是完整的网页应用。Streamlit为例，你写数据处理逻辑，它自动帮你生成UI控件（下拉菜单、图表、筛选器）。代码和界面耦合在一起，改数据逻辑的同时就改了页面。
+
+- 优点：一个人能搞定，部署就一条命令
+- 限制：界面长什么样由框架决定，定制空间有限，"看起来像数据工具"
+
+**B) 前后端分离** — 两个独立程序。后端（FastAPI）负责数据抓取、NLP处理、提供API接口；前端（React）是独立的网页应用，从API拿数据然后自由绘制界面。两边通过API通信，互不知道对方内部怎么写的。
+
+- 优点：界面完全自定义，可以做得很polished
+- 代价：两套代码、两种语言（Python + JavaScript），至少需要两个不同技能的agent
+
+**对竞赛来说关键区别：** A出活快但看起来是"工具"，B出活慢但看起来是"产品"。
+
+你想给评委看到的是哪种印象喵？
+
+═══ Vincent ═══
+
+我们最终做B. 现在做A的话可以改成B 么?
+
+═══ 凌喵 ═══
+
+可以喵，但有条件。
+
+关键在于：**A阶段的后端逻辑写得干不干净。** 如果scraping、NLP、数据聚合这些都是独立的Python模块，而不是写死在Streamlit的UI回调里，那迁移到B就是：
+
+1. 把这些模块包一层FastAPI路由 → 变成后端
+2. Streamlit扔掉 → 换React前端调API
+
+工作量主要在第2步（重写前端），后端逻辑几乎原封不动搬过去。
+
+**所以这直接影响team设计：** 数据处理逻辑必须从第一天就和Streamlit UI解耦。这不是重构，是文件结构的问题——谁写哪个文件、模块边界在哪里，现在就要定死。
+
+下一个问题：
+
+**你要追踪的产品范围有多大？** 比如：
+
+- **A)** SharkNinja 1-2个核心品类（比如吸尘器+空气炸锅）+ 每个品类2-3个竞品品牌
+- **B)** SharkNinja全线 + 广泛竞品扫描
+- **C)** 你已经有具体的品牌/产品清单了
+
+这决定了scraper的设计复杂度和数据schema喵。
+
+═══ Vincent ═══
+
+B.那这样的话，我们做前后端分离，有没有可能我们现在的这个后端，先不让它去抓取数据？
+
+我希望我们现在能先用一个静态的本地 CSV file 或者一个本地的 Excel file，来做一个 simulation。
+
+═══ 凌喵 ═══
+
+这个思路非常干净喵。
+
+等于你要的架构是：
+
+<code block: 9 lines of unknown, 省略>
+
+数据源是个接口，现在塞静态文件，之后换成真实scraper，下游完全不用动。
+
+这也意味着团队分工更清晰——做dashboard的人不需要等scraper写好就能开始工作。
+
+下一个问题：
+
+**那个静态模拟数据，你打算怎么来？**
+
+- **A)** 你自己手动从Amazon/Reddit截一些真实评论，整理成CSV
+- **B)** 让agent用LLM生成模拟数据（假评论、假评分，但结构真实）
+- **C)** 两者结合——你提供几条真实样本定schema，agent批量生成填充数据
+
+C的好处是schema有真实锚点，量又够做可视化喵。
+
+═══ Vincent ═══
+
+utils/generate_sample_data.py 生成了1998条模拟评论 - 用预写的review模板 + 随机组合产品/平台/日期/作者，然后跑VADER打情感分。
+
+═══ 凌喵 ═══
+
+明白了喵，数据生成方案已经确定——你之前已经做过一版了。
+
+下一个问题：
+
+**你对这3-5个teammates的分工模型怎么想的？** 我想确认你的意图：
+
+- **A)** 按技术层切分——一个管数据层，一个管API，一个管前端，一个管NLP，一个管集成测试
+- **B)** 按功能切分——一个管scraping+数据，一个管分析+预测，一个管dashboard可视化，一个管质量
+- **C)** 你心里已经有一个大概的分法，说给我听
+
+这决定了file ownership的切割方式喵。
+
+═══ Vincent ═══
+
+我需要一定存在的一个agent是Business Leader. 他要去互联网上搜集真实的竞品信息，也就是其他能满足这种需求的 solution。
+
+此外，在 Customer Intelligence、Customer Review 和 Sentiment Analysis 这些方面，他需要模拟真实的 Business Leader 在实际世界环境中会产生的需求考量、痛点以及可能的应用思考。
+
+我需要他有办法从互联网上抓取这些信息，但为了避免把 Token burn 干净，我会赋予他三轮提出、修改需求或给出 Feedback 的能力。这样他就类似于一个 Reviewer：
+1. 流程会从他的思路上开始。
+2. 等所有人的工作完成后，Final Product 也会交由他进行 Review。
+3. 他会根据现有的内容，结合搜集到的互联网信息进行 Feed，重新迭代升级。
+
+每在他这里跑完三轮，我会手动 check 一下。至于剩下的部分我还没想好怎么分，你有没有建议？
+
+═══ 凌喵 ═══
+
+好喵，Business Leader的角色很清晰了——他是流程的发起者和终审者，三轮迭代一个checkpoint。
+
+基于你的架构（可插拔数据源 → NLP处理 → FastAPI → React），我建议剩下三个：
+
+---
+
+**Data Engineer** — 拥有从原始数据到清洗完成的一切
+
+- `data/`目录：schema定义、CSV/Excel、清洗脚本
+- `utils/generate_sample_data.py`（你已有的）
+- 未来的scrapers
+- 输出：**清洗好的标准化数据文件** → 给Backend Engineer消费
+
+**Backend Engineer** — 拥有从标准化数据到API响应的一切
+
+- `api/`目录：FastAPI路由、NLP情感分析模块、聚合逻辑
+- `models/`目录：数据模型、预测模型
+- 输出：**可运行的API endpoints** → 给Frontend Engineer调用
+
+**Frontend Engineer** — 拥有从API到用户看到的一切
+
+- `frontend/`目录：React组件、图表、交互逻辑
+- 只通过API contract和Backend对接，不碰Python文件
+- 输出：**可运行的Dashboard界面**
+
+---
+
+流程就是：
+
+<code block: 7 lines of unknown, 省略>
+
+四个agent，文件目录完全隔离，没有任何一个文件会被两个agent同时写。
+
+这个分法你觉得合理么，还是想调整喵？
+
+═══ Vincent ═══
+
+data和backend的区别是什么?
+
+═══ 凌喵 ═══
+
+说实话，在你这个项目里，区别很模糊喵。
+
+**Data Engineer做的事：** 读CSV → 清洗 → 输出标准格式
+**Backend Engineer做的事：** 拿标准格式 → 跑NLP → 包成API
+
+但实际上这是一条连续的pipeline。中间切一刀，反而制造了一个人工交接点——Data输出的格式Backend必须严格对齐，多一个对接就多一个出bug的地方。
+
+**我的建议：合并成一个。**
+
+三个agent就够了：
+
+| Agent | 管什么 | 输出给谁 |
+|-------|--------|----------|
+| **Business Leader** | 需求、竞品research、review | 全员 |
+| **Backend Engineer** | `data/` + `api/` + `models/` — 从CSV到NLP到API端点，整条pipeline | Frontend |
+| **Frontend Engineer** | `frontend/` — React dashboard，只调API | Business Leader（最终review） |
+
+这样Backend一个人对数据全链路负责，不存在"你的清洗格式和我的期望不一致"的问题。文件隔离依然干净——Python全归Backend，JavaScript全归Frontend。
+
+你觉得三个够还是想保留四个喵？
+
+═══ Vincent ═══
+
+如果未来我们扩充了, 真的去scrape了, Backend也没错么?
+
+═══ 凌喵 ═══
+
+没错喵。Scraper本质上就是"数据从哪来"——和读CSV是同一层的事，只是数据源换了。
+
+<code block: 2 lines of unknown, 省略>
+
+换数据源只是Backend内部改一个模块，API接口不变，Frontend完全无感。
+
+真正需要拆出独立Data Engineer的场景是：scraper规模大到需要单独的调度系统、反爬策略、数据库管理——那是工程团队十几个人的事。你这个MVP阶段，一个Backend全包更干净。
+
+**如果将来真到了那一步，拆也很简单：** 从Backend的`data/`目录整个搬出去给新agent，API层不用动。因为模块本来就是解耦的。
+
+所以三个agent的方案确认么喵？
+
+═══ Vincent ═══
+
+嗯. 然后Joyce说他们还想要的功能是这样的:"推Sentiment的算法
+你可以让AI给你写点edge case" 我让隔壁session"中译中"了一下, 是"凌喵翻译一下Joyce的意思喵：
+
+"推Sentiment的算法" = 把情感分析的算法做得更强。现在用的VADER是最基础的词典匹配（看到"great"加分，看到"terrible"减分），很粗糙。她的意思是算法本身应该是一个亮点，不能只用现成的。
+
+"你可以让AI给你写点edge case" = 用AI（比如Claude）生成一些刁钻的测试用例来检验算法。比如：
+
+"This vacuum sucks" - sucks是好事（吸力强）还是坏事？
+"Not bad for the price" - 双重否定，VADER容易判错
+"I returned my Dyson and bought this instead" - 对Shark是正面，对Dyson是负面
+"5 stars but only because 0 isn't an option" - 评分和文字矛盾
+讽刺/反语："Oh great, another vacuum that dies after 3 months"
+Joyce的建议其实很到位 - 这是在说算法本身要有竞争力，不能只套一个现成library就交差。对竞赛来说这是加分项。"这个会影响我们的效果么?
+
+═══ 凌喵 ═══
+
+影响很大喵，而且Joyce说得对。
+
+VADER对英文消费评论的准确率大概在60-70%之间，上面那些edge case它基本全判错。竞赛评委一眼就能看出你是套了个现成library还是真的做了工作。
+
+**对team设计的影响：** Backend Engineer的职责变重了。NLP不再是"调一个library"，而是需要：
+
+1. VADER作为baseline
+2. 在上面叠加规则层或者用transformer模型（比如用预训练的sentiment model处理edge case）
+3. 用AI生成的edge case做测试验证
+
+这不改变三个agent的结构，但改变Backend的内部模块划分：
+
+<code block: 8 lines of unknown, 省略>
+
+**这也给Business Leader多了一个review维度：** 他不只看dashboard好不好看，还要拿edge case去challenge情感分析的准确率——这恰好是真实business leader会做的事。
+
+要不要把"NLP算法是亮点"这个约束正式加进设计喵？
+
+═══ Vincent ═══
+
+我觉得要
+
+═══ 凌喵 ═══
+
+Plan写好了喵。核心设计总结：
+
+**3个Agent，目录完全隔离：**
+
+| Agent | Model | 写入范围 | 核心职责 |
+|-------|-------|---------|---------|
+| **Business Leader** | opus | `contracts/` + `README.md` | 竞品研究 → 需求文档 → 3轮Review |
+| **Backend Engineer** | sonnet | `backend/` + `contracts/api-contract.yaml` | 数据管线 + NLP(亮点) + FastAPI |
+| **Frontend Engineer** | sonnet | `frontend/` | React Dashboard + 可视化 |
+
+**通信机制：** 全部通过`contracts/`目录的文件交接，没有任何文件被两个agent同时写入。
+
+**NLP作为竞争亮点：** VADER baseline + 增强层（领域词典、讽刺检测、比较情感、方面级情感），配套edge case测试。
+
+**工作流：** Business Leader发需求 → 两个Engineer并行开发 → Business Leader Review（3轮） → Vincent手动check。
+
+═══ Vincent ═══
+
+[Request interrupted by user for tool use]
+
+═══ 凌喵 ═══
+
+No response requested.
+
+═══ Vincent ═══
+
+再开始之前, 我们这个是agentic team的工作方式对吧, https://code.claude.com/docs/en/agent-teams 这样的感觉,而不是agent自己在单独的silo里? 二来, 我听说要让一些agent有类似于plan mode的能力. 这个东西怎么弄, 你怎么看?
+
+═══ 凌喵 ═══
+
+读完文档了喵，这俩问题都很重要，而且我发现我之前的plan需要修正。
+
+---
+
+## 1. 是Agent Teams，不是silos ✓
+
+确认是agent teams的工作方式喵。我之前的plan把它当silos设计太重了。Agent teams有几个built-in能力，我没有充分利用：
+
+- **直接消息**：teammate之间可以用`SendMessage`互相发消息，不需要走lead中转
+- **共享任务列表**：所有teammate看得到同一份task list，可以claim/complete任务，任务之间能有依赖关系
+- **自动消息投递**：发消息会自动推送给收件人，不需要轮询
+- **Idle通知**：teammate完成工作会自动通知lead
+
+也就是说：我之前设计的`contracts/`目录作为"主通信层"是过度工程化了。`SendMessage`才是coordination层，`contracts/`只应该存**持久化的产出物**（requirements doc, api-contract, review files）。
+
+**架构修正：**
+
+<code block: 7 lines of unknown, 省略>
+
+注意：**Lead不是Business Leader**。Lead是"那个跟你说话的session"，是thin orchestrator。Business Leader是个独立teammate。
+
+---
+
+## 2. Plan Mode for Teammates — 真的有！而且很关键
+
+文档里的"Require plan approval for teammates"功能：
+
+> The teammate works in read-only plan mode until the lead approves their approach.
+>
+> When a teammate finishes planning, it sends a plan approval request to the lead. The lead reviews the plan and either approves it or rejects it with feedback. If rejected, the teammate stays in plan mode, revises based on the feedback, and resubmits.
+
+**这正好对应你想要的"Business Leader Review"模式喵**，但有一个关键区别需要澄清：
+
+| 机制 | 触发时机 | 用途 |
+|------|---------|------|
+| **Plan approval mode** | 实现**开始之前** | gate住"我打算这么做"，approve后才能写代码 |
+| **Vincent的3轮Review** | 实现**完成之后** | 看完成品，提feedback，迭代 |
+
+这俩是**互补**的，不是替代关系。我的建议：
+
+**两层gate组合：**
+
+1. **第一层（plan approval）**：
+   - Backend Engineer和Frontend Engineer都用`require plan approval`spawn
+   - 它们必须先写计划 → Business Leader review → 批准后才能写代码
+   - 这一步防止agent乱开工，省token
+
+2. **第二层（3轮review）**：
+   - 实现完成后，Business Leader读代码、跑服务、写`contracts/review-round-N.md`
+   - 通过SendMessage把issue推回去
+   - 3轮后你手动check
+
+**怎么让Business Leader有"approve plan"的权力？** 文档里说：
+> The lead makes approval decisions autonomously. To influence the lead's judgment, give it criteria in your prompt.
+
+也就是说plan approval是**lead**做的决定，不是teammate。所以正确的pattern是：
+- **Lead** = "你"在隔壁session，但lead的system prompt里被指示"在批准plan前，先把plan转发给business-leader teammate征求意见，按business-leader的判断决定approve/reject"
+- 或者更简单：你（Vincent）作为lead的用户，看到plan approval请求时，先让lead把plan发给business-leader征求意见，再据此approve
+
+---
+
+## 其他文档发现
+
+3. **`.claude/agents/`里的subagent定义可以直接用作teammate type** — 我现有的plan没问题，3个agent .md文件就是teammate定义
+
+4. **不要在项目里建`.claude/teams/`目录** — 文档明确说"There is no project-level equivalent of the team config"，team config在`~/.claude/teams/`下自动生成。**你之前那个teams flag的设置在settings.json里是对的**
+
+5. **Hooks能强化质量门禁**：`TaskCompleted` hook可以exit code 2拒绝标记完成 + 给反馈，比如"测试没跑过不能标记完成"
+
+6. **CLAUDE.md会被所有teammate读到** — 这是放file ownership规则的最佳位置
+
+---
+
+让我把这些发现写进plan的修订版。
+
+═══ 凌喵 ═══
+
+好喵，开始落地。委派给shell-runner创建所有文件。
+
+═══ Vincent ═══
+
+[Request interrupted by user for tool use]
+
+═══ Vincent ═══
+
+我需要一个完整的prompt, 复制粘贴在新的session进行, 不然agent team mode不会起作用.
+
+═══ 凌喵 ═══
+
+明白喵。Agent team mode必须在新session里被触发，而且需要**一个self-contained的prompt**——既要让那个session自己创建文件，又要让它启动team并按正确顺序spawn agents。
+
+下面是完整prompt。**复制从`========= COPY FROM HERE =========`到`========= END COPY =========`之间的全部内容**，粘贴到一个**新的Claude Code session**里（在`D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\`目录下启动）。
+
+---
+
+`========= COPY FROM HERE =========`
+
+You are about to act as the **lead** of a Claude Code agent team for the SharkNinja Consumer Sentiment Dashboard MVP project. Read these instructions carefully and execute them step by step. Do NOT skip steps. Do NOT improvise file content — use the exact content provided.
+
+## Project Background
+
+SharkNinja竞赛 — Consumer Sentiment Dashboard: Social Listening MVP. 三agent team: business-leader (Opus, reviewer), backend-engineer (Sonnet, FastAPI), frontend-engineer (Sonnet, React). Backend和Frontend用plan approval mode gate住实现，business-leader做需求+plan审批咨询+3轮review。
+
+Project root: `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\`
+
+## Phase 0: Create project structure (do this FIRST, before creating the team)
+
+### Step 0.1 — Create directories
+
+Create these directories (the parent `Project_Trial` already exists):
+
+- `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\`
+- `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\.claude\`
+- `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\.claude\agents\`
+- `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\contracts\`
+- `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\backend\`
+- `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\frontend\`
+
+**DO NOT create `.claude\teams\`** — that's explicitly forbidden per Claude Code docs (team config is auto-generated under `~/.claude/teams/`, not project-level).
+
+### Step 0.2 — Write `.claude/settings.json`
+
+Path: `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\.claude\settings.json`
+
+Content:
+<code block: 5 lines of json, 省略>
+
+### Step 0.3 — Write `CLAUDE.md` (at project root)
+
+Path: `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\CLAUDE.md`
+
+Content (write EXACTLY this, including all sections):
+
+<code block: 63 lines of unknown, 省略>
+
+### Step 0.4 — Write `.claude/agents/business-leader.md`
+
+Path: `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\.claude\agents\business-leader.md`
+
+Content (write EXACTLY, including the YAML frontmatter):
+
+<code block: 77 lines of unknown, 省略>
+
+### Step 0.5 — Write `.claude/agents/backend-engineer.md`
+
+Path: `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\.claude\agents\backend-engineer.md`
+
+Content:
+
+<code block: 111 lines of unknown, 省略>
+
+### Step 0.6 — Write `.claude/agents/frontend-engineer.md`
+
+Path: `D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\Challenge_5_v2\.claude\agents\frontend-engineer.md`
+
+Content:
+
+<code block: 71 lines of unknown, 省略>
+
+### Step 0.7 — Verify file structure
+
+After all files are written, verify:
+- 4 files exist under `Challenge_5_v2/.claude/` (settings.json + 3 agents)
+- `Challenge_5_v2/CLAUDE.md` exists at project root
+- `Challenge_5_v2/contracts/`, `backend/`, `frontend/` directories exist (empty)
+- **NO** `Challenge_5_v2/.claude/teams/` directory
+
+If any check fails, fix it before proceeding to Phase 1.
+
+---
+
+## Phase 1: Create the agent team and spawn business-leader
+
+After Phase 0 is complete, you need to create an agent team. Confirm `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` is active in your environment (it's set in `.claude/settings.json` you just wrote — you may need to restart this session if it wasn't set before; if so, tell Vincent to restart and re-paste this prompt).
+
+**Spawn the first teammate:**
+
+> Create an agent team for this Challenge_5_v2 project. Spawn one teammate using the `business-leader` agent type. Initial prompt for it: "You are in Mode 1 (Requirements Phase). Use WebSearch to research SharkNinja's full product line, competitors (Dyson, iRobot, KitchenAid, Breville, Cuisinart, Keurig, De'Longhi), and the social listening market (Brandwatch, Sprout Social, Meltwater, Talkwalker). Then write contracts/requirements.md following the structure in your system prompt. When done, SendMessage me 'Requirements ready'."
+
+Wait for business-leader to finish. Do NOT start engineer agents until requirements.md exists.
+
+---
+
+## Phase 2: Spawn engineers with plan approval required
+
+Once business-leader reports requirements ready:
+
+**Spawn backend-engineer (REQUIRE PLAN APPROVAL):**
+
+> Spawn another teammate using the `backend-engineer` agent type. Require plan approval before any implementation. Initial prompt: "Read contracts/requirements.md and CLAUDE.md, then write your detailed implementation plan covering file structure, NLP pipeline, API endpoints, scraper abstraction, and test strategy. Submit the plan for approval."
+
+**Spawn frontend-engineer (REQUIRE PLAN APPROVAL) in parallel:**
+
+> Spawn another teammate using the `frontend-engineer` agent type. Require plan approval before any implementation. Initial prompt: "Read contracts/requirements.md and CLAUDE.md, then write your detailed implementation plan covering component hierarchy, state management, API integration, visualization library choice, and styling approach. Submit the plan for approval."
+
+---
+
+## Phase 3: Plan approval coordination (CRITICAL)
+
+When backend-engineer or frontend-engineer submits a plan for approval, you (the lead) DO NOT decide alone. Your protocol:
+
+1. Receive the plan approval request from the engineer
+2. **SendMessage business-leader** with the full plan text and ask: "An engineer submitted this plan for approval. Please review against contracts/requirements.md and reply with APPROVE or REJECT plus reasons (cite REQ IDs)."
+3. Wait for business-leader's response
+4. If business-leader says APPROVE → approve the plan
+5. If business-leader says REJECT → reject the plan with business-leader's feedback. The engineer will revise and resubmit.
+6. Repeat for each engineer
+
+---
+
+## Phase 4: Implementation phase
+
+After both plans are approved, the engineers will implement in parallel. Monitor their progress via the shared task list. Don't interfere unless they're stuck or going off track.
+
+Backend will eventually SendMessage frontend "API contract ready" — that's the signal frontend can switch from mock data to real API.
+
+---
+
+## Phase 5: Review rounds (3 total)
+
+When both engineers report implementation complete:
+
+1. SendMessage business-leader: "Both engineers report implementation complete. Begin Review Round 1."
+2. business-leader will read code, possibly run services, and write `contracts/review-round-1.md`, then SendMessage engineers
+3. Wait for engineers to report fixes complete
+4. Repeat for Round 2, then Round 3
+5. After Round 3, business-leader will SendMessage you "Round 3 complete with status [PASS/FAIL]. Ready for Vincent's manual check."
+6. Notify Vincent: "Project ready for your manual check. Run `cd backend && pip install -r requirements.txt && python main.py` and `cd frontend && npm install && npm run dev` to verify."
+
+---
+
+## Important Reminders
+
+- Stay in lead/orchestrator mode. Don't write code yourself.
+- Use SendMessage for all teammate communication.
+- Forward plan approval requests to business-leader, never approve solo.
+- The shared task list is your friend — use it to track who's doing what.
+- If a teammate goes idle without completing its task, nudge it via SendMessage.
+- Don't clean up the team until Vincent confirms manual check is done.
+
+Begin with Phase 0 Step 0.1 now.
+
+`========= END COPY =========`
+
+---
+
+**使用说明喵：**
+
+1. **打开新Claude Code session**，cd到`D:\Ai_Project\MeowOS\99_MyFiles\Project_Trial\`（或Challenge_5_v2上一级任意目录）
+2. 把上面整段（从`========= COPY FROM HERE =========`到`========= END COPY =========`，**包括标记之间的所有内容**）粘贴进去
+3. 新session会按Phase 0 → 5逐步执行
+4. 第一轮plan approval时你会被问到，业务建议来自business-leader，但final approve需要你点确认
+5. 三轮review跑完后，session会通知你做manual check
+
+**关键警告：** Phase 0完成后，agent teams flag可能需要session重启才生效（因为env var从settings.json加载是在session启动时）。如果新session报错说"agent teams disabled"，让它告诉你重启，然后**重新粘贴一次同样的prompt**——Phase 0的文件创建是幂等的，再跑一次没问题。
+
+═══ Vincent ═══
+
+你给我写的是什么东西?????????? 重新去读一遍文档. 重新看一下人家给的examples 和practices
+
+═══ 凌喵 ═══
+
+抱歉喵，我把doc示例的风格完全搞错了。
+
+**重新读了doc之后我意识到三个错误：**
+
+1. **Doc里的spawn prompt都是3-8行自然语言**，不是600行的scripted workflow。例子：
+   <code block: 3 lines of unknown, 省略>
+   就这样。Lead自己figure out剩下的。
+
+2. **我把"on-disk文件创建"和"team激活prompt"混在一起了**。这俩应该分开：
+   - 文件（agent .md / CLAUDE.md / settings.json）应该**先存在于disk上**
+   - 新session打开后，给一个**短prompt**激活team就行
+
+3. **Plan approval flow我over-engineer了**。Doc原话："The lead makes approval decisions autonomously. To influence the lead's judgment, give it criteria in your prompt."——意思是在prompt里告诉lead"批准plan前先咨询business-leader"，lead自己处理，不用我写脚本。
+
+---
+
+**正确做法分两步：**
+
+**第一步**：现在用shell-runner把所有on-disk文件写好（agent .md × 3 + CLAUDE.md + settings.json）。这是pure on-disk setup，跟team mode无关。
+
+**第二步**：给你一个**短的、自然语言的prompt**（doc style，10行左右），你打开新session后paste进去。
+
+文件内容我之前draft的没问题，bug在prompt结构。让我重新执行——先创建文件，然后给你clean prompt。
+
+要我现在proceed么？还是你想先看一眼我打算给你的那个短prompt长什么样？
+
+═══ Vincent ═══
+
+我不需要你在这儿把 on-disk 的文件写好。我就直接要一个 prompt，开一个新 session，paste 进去，然后让 agent team 自己 figure out 其他的东西
+
+═══ 凌喵 ═══
+
+明白喵。下面就是那个prompt——开新session，paste进去，team自己figure out。
+
+<code block: 28 lines of unknown, 省略>
+
+**使用方式喵：**
+
+1. 开新Claude Code session（cd到`Project_Trial/`或更上层都行，不用先建Challenge_5_v2目录）
+2. 把上面整个code block里的内容paste进去
+3. Lead会自己创建目录、写CLAUDE.md、按顺序spawn teammates、协调plan approval和3轮review
+4. plan approval时它会先问business-leader，然后再来问你确认
+5. 跑完Round 3它会通知你做manual check
+
+如果team mode没激活（settings.json里没有`CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`），lead会先告诉你需要enable+重启。你那边MeowOS父目录的settings.json已经enable了，新session如果在Project_Trial下启动应该能继承。

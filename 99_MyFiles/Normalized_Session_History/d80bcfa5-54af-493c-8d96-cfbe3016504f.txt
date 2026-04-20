@@ -1,0 +1,174 @@
+═══ Vincent ═══
+
+这是我这几天在做 AI 学习和工作流程反思中得出的许多思考。我希望把它们内化到我的知识库里。
+
+═══ 凌喵 ═══
+
+格式清楚了。现在规划完整的归档结构，一次性创建所有文件。
+
+═══ Vincent ═══
+
+继续
+
+═══ Vincent ═══
+
+继续
+
+═══ 凌喵 ═══
+
+shell-runner 信用不足，直接用 Write 工具写入——我已有所有内容，不需要再读文件。
+
+═══ Vincent ═══
+
+用shell-runner写完剩下的文件
+
+═══ 凌喵 ═══
+
+全部完成。归档结构如下：
+
+**新增文件（5个）**
+
+<code block: 8 lines of unknown, 省略>
+
+**内容分配逻辑：**
+- 文章项目 → `82_Projects`（有明确的交付物和写作状态）
+- 企业 AI 框架 + 个人系统设计知识 → `86_AI_Systems`（独立知识域，与现有 Identity/Projects/Fitness 平级）
+
+═══ Vincent ═══
+
+检查一下写入的knowledge的完整性. 不要在主session的context进行. 不要再重新读既有的文件.
+
+═══ 凌喵 ═══
+
+验证结果：
+
+**4/5 complete，1/5 partial**
+
+| 文件 | 状态 | 说明 |
+|---|---|---|
+| `llm-article.md` | ✅ complete | 4个大纲区块，10行 Article 1 表格，全部到位 |
+| `org-cognitive-infrastructure.md` | ✅ complete | 10个章节，五层/七模式/四KPI 行数均核验通过 |
+| `kb-architecture.md` | ✅ complete | 17个章节，5个思想框架，对比表全部到位 |
+| `86_AI_Systems/_manifest.md` | ✅ complete | 两条摘要均有实质内容 |
+| `82_Projects/_manifest.md` | ⚠️ partial | belmont/trade/job-search 三条仍是「待生成」占位符——这是预期状态，等那三个源文件填充后再生成 |
+
+partial 那条不是问题，是正常的——那三个项目文件本来就还没内容。
+
+═══ Vincent ═══
+
+我目前的文章项目已经有两篇了. 你觉得,基于我已经会的这些东西, 我还可以写哪些话题性的文章? 我希望你提供几个选题, 尽量几个选题完整地覆盖我目前知识库里学会的所有东西.
+
+═══ 凌喵 ═══
+
+先梳理现有两篇已经覆盖了什么，然后看缺口在哪。
+
+**Articles 1 & 2 已覆盖：**
+个人 KB 架构（稀疏索引、Manifest、Dump、Tag、QueryAgent）、三个实战系统、个人到企业的扩展路径、Polanyi 作为引子。
+
+**尚未覆盖的主要知识块：**
+- 三重对齐问题 + 共享认知地基
+- 五层 OCI 架构 + 七种人机交互模式
+- AI 判断标准的三个来源
+- 部署三阶段 + 被动 KPI 体系
+- 个人信息主权 / 信任设计
+- Prompt 设计六要素
+- Human Becoming + AI 作为认知伴侣
+
+---
+
+基于这些缺口，建议以下五个选题：
+
+---
+
+**Article 3 — The Triple Alignment Problem**
+
+> *Why your organization's AI tools aren't making you smarter*
+
+覆盖：三重对齐失败（信息/进度/粒度）、共享认知地基的定义、工具层 AI 和认知基础设施的根本区别。
+
+这是整个 OCI 框架最有传播力的概念入口——给一个每个高管都经历过但没有名字的问题命名。文章一二讲"系统怎么建"，这篇讲"为什么需要建"。
+
+---
+
+**Article 4 — Writing Prompts for Thinking, Not Tasks**
+
+> *How to turn an AI assistant into a thinking partner*
+
+覆盖：Prompt 六要素（角色建立、Session 性质声明、上下文给予、暴露盲点、负向要求、以问题收尾）、对话深度维护技巧、执行模式 vs 思维伙伴模式的本质区别。
+
+受众最广的一篇，实操性最强。与其他篇形成互补：其他篇讲系统设计，这篇讲日常使用。
+
+---
+
+**Article 5 — Seven Modes of Human-AI Collaboration**
+
+> *A taxonomy for designing how people actually work with AI*
+
+覆盖：七种交互模式（环境感知/审批/异常推送/文档协同/结构化录入/委托执行/订阅监听）、每种模式的适用场景与设计原则、"让 AI 存在感消失"作为最高设计目标。
+
+可以作为独立框架文章，也可以作为 Article 3 的配套深度篇。组织部署者和产品设计者都有价值。
+
+---
+
+**Article 6 — Privacy by Default: The Missing Layer in Enterprise AI**
+
+> *Why most organizational AI deployments fail at trust, not technology*
+
+覆盖：信任失败 vs 技术失败的区分、个人信息主权设计原则（默认私有/主动公开）、不对称可见性设计、AI 感知为监控工具的后果。
+
+这是最有政策和治理意义的一篇。也是 Article 2 明确没有展开的盲区。
+
+---
+
+**Article 7 — We Know More Than We Can Tell: Tacit Knowledge and AI**
+
+> *Polanyi's paradox revisited — and why it explains so much about how AI systems succeed or fail*
+
+覆盖：波兰尼悖论的深度展开、AI 判断标准三来源（训练知识/硬规则/历史数据）、schema 比较法作为隐性知识外化的结构性方法、Intel Context Atlas 对比、知识传播的历史视角（连接 Vincent 的技术史研究背景）。
+
+这是最有学术厚度的一篇，也是 Vincent 最具辨识度的角度——历史学家写 AI，核心问题其实是一样的。
+
+---
+
+**覆盖地图：**
+
+| 知识块 | 覆盖文章 |
+|---|---|
+| 个人 KB 架构 | Articles 1 & 2 |
+| 企业扩展路径 | Article 2 |
+| 三重对齐 + OCI 概念 | Article 3 |
+| 七种交互模式 | Article 5 |
+| Prompt 设计 | Article 4 |
+| 信任 + 信息主权 | Article 6 |
+| 波兰尼 + 隐性知识 + 判断标准 | Article 7 |
+| Human Becoming + AI 伴侣观 | 可并入 Article 7，或作为 Article 7 的后记 |
+
+七篇合计基本清零现有知识库。
+
+═══ Vincent ═══
+
+我希望我的这些文章都能或多或少地关乎我的探讨母题. 我希望你能将这七个artical的写作并入我目前的dashboard的写作计划, 同时将这个设计大概放入我的知识库里. 另外, 知识库里要有deprecated的一个folder. 不再需要的知识/initiatives, ideas, project都可以放进去.
+
+═══ 凌喵 ═══
+
+完成。变更汇总：
+
+**新增文件**
+- [article-series.md](80_Knowledge/82_Projects/article-series.md) — 系列总规划，含母题定义、七篇映射表、系列弧线
+- [90_Deprecated/_index.md](80_Knowledge/90_Deprecated/_index.md) — deprecated 文件夹，含使用规则和弃用格式模板
+
+**更新文件**
+- [82_Projects/_manifest.md](80_Knowledge/82_Projects/_manifest.md) — 加入 article-series.md 摘要
+- [Dashboard.md](Dashboard.md) — Todo 区新增 ✍️ 写作计划，七篇状态一览
+
+---
+
+关于母题，我的理解是：**Polanyi 那句话是锚，但你真正在问的是一个历史学家的问题**——知识传播的条件是什么？什么样的基础设施让知识从少数人走向多数人、从个体经验走向集体实践？AI 系统只是这个问题在 2026 年的新场景。如果你对这个母题的表述有不同感受，直接告诉我，我去更新 article-series.md。
+
+═══ Vincent ═══
+
+<command-args></command-args>
+
+═══ Vincent ═══
+
+<command-args></command-args>

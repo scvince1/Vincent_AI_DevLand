@@ -1,0 +1,1566 @@
+openapi: 3.1.0
+info:
+  title: SharkNinja Consumer Sentiment Dashboard
+  description: Consumer-electronics-aware NLP pipeline for social listening. Handles
+    sarcasm, comparative sentiment, ABSA, and CE domain terminology.
+  version: 1.0.0
+paths:
+  /api/mentions:
+    get:
+      tags:
+      - mentions
+      summary: List Mentions
+      description: List mentions with optional filtering. Supports drill-through from
+        all dashboard pages.
+      operationId: list_mentions_api_mentions_get
+      parameters:
+      - name: platform
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/SourcePlatform'
+          - type: 'null'
+          title: Platform
+      - name: brand
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Brand'
+          - type: 'null'
+          title: Brand
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+          title: Category
+      - name: product_model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Product Model
+      - name: date_from
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Date From
+      - name: date_to
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Date To
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      - name: offset
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Offset
+      - name: topic_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Topic Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MentionListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/mentions/{mention_id}:
+    get:
+      tags:
+      - mentions
+      summary: Get Mention
+      description: Retrieve a single mention by ID.
+      operationId: get_mention_api_mentions__mention_id__get
+      parameters:
+      - name: mention_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Mention Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Mention'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/overview/kpis:
+    get:
+      tags:
+      - overview
+      summary: Get Kpis
+      description: 'Top-line KPIs: total mentions, overall sentiment score, WoW delta,
+        rising aspects.'
+      operationId: get_kpis_api_overview_kpis_get
+      parameters:
+      - name: brand
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Brand'
+          - type: 'null'
+          title: Brand
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+          title: Category
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OverviewKPIs'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/overview/timeseries:
+    get:
+      tags:
+      - overview
+      summary: Get Timeseries
+      description: Daily sentiment timeseries, filterable by brand/category.
+      operationId: get_timeseries_api_overview_timeseries_get
+      parameters:
+      - name: brand
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Brand'
+          - type: 'null'
+          title: Brand
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+          title: Category
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeseriesResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/overview/share_of_voice:
+    get:
+      tags:
+      - overview
+      summary: Get Share Of Voice
+      description: Share-of-voice by brand. Optionally filtered by category.
+      operationId: get_share_of_voice_api_overview_share_of_voice_get
+      parameters:
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+          title: Category
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShareOfVoiceResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/products:
+    get:
+      tags:
+      - products
+      summary: List Products
+      description: List all products with summary stats (brand, category, overall
+        score, mention count).
+      operationId: list_products_api_products_get
+      parameters:
+      - name: brand
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Brand'
+          - type: 'null'
+          title: Brand
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+          title: Category
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductSummary'
+                title: Response List Products Api Products Get
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/products/{product_model}/aspects:
+    get:
+      tags:
+      - products
+      summary: Get Product Aspects
+      description: Per-product aspect breakdown with trend and severity.
+      operationId: get_product_aspects_api_products__product_model__aspects_get
+      parameters:
+      - name: product_model
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Product Model
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAspectResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/products/{product_model}/timeseries:
+    get:
+      tags:
+      - products
+      summary: Get Product Timeseries
+      description: Per-product daily sentiment timeseries.
+      operationId: get_product_timeseries_api_products__product_model__timeseries_get
+      parameters:
+      - name: product_model
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Product Model
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TimeseriesResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/products/{product_model}/forecast:
+    get:
+      tags:
+      - products
+      summary: Get Product Forecast
+      description: '4-week forward sentiment forecast using exponentially-weighted
+        linear projection.
+
+
+        Use ?explain=true to return the formula documentation instead of forecast
+        data.
+
+
+        Method: heuristic projection, NOT an LLM simulation. See forecast.py for full
+        formula.
+
+        low_confidence=true when mention_count < 50 OR window_days < 14.'
+      operationId: get_product_forecast_api_products__product_model__forecast_get
+      parameters:
+      - name: product_model
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Product Model
+      - name: explain
+        in: query
+        required: false
+        schema:
+          type: boolean
+          description: Return formula documentation instead of forecast data
+          default: false
+          title: Explain
+        description: Return formula documentation instead of forecast data
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForecastResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/platforms/comparison:
+    get:
+      tags:
+      - platforms
+      summary: Get Platform Comparison
+      description: 'Cross-platform aspect sentiment grid.
+
+        Rows = platforms, columns = aspects. Cell = sentiment score + mention volume.'
+      operationId: get_platform_comparison_api_platforms_comparison_get
+      parameters:
+      - name: brand
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Brand'
+          - type: 'null'
+          title: Brand
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+          title: Category
+      - name: product_model
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Product Model
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformComparisonResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/topics:
+    get:
+      tags:
+      - topics
+      summary: Get Topics
+      description: 'Emerging topics clustered by aspect, sorted by momentum.
+
+        Each topic includes exemplar quotes for evidence traceability.'
+      operationId: get_topics_api_topics_get
+      parameters:
+      - name: brand
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Brand'
+          - type: 'null'
+          title: Brand
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+          title: Category
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicExplorerResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/topics/comparative:
+    get:
+      tags:
+      - topics
+      summary: Get Comparative Topics
+      description: 'Share-of-aspect comparison between two brands.
+
+        Shows which aspects each brand dominates in consumer conversation.'
+      operationId: get_comparative_topics_api_topics_comparative_get
+      parameters:
+      - name: brand_a
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Brand'
+          description: First brand for comparison
+        description: First brand for comparison
+      - name: brand_b
+        in: query
+        required: true
+        schema:
+          $ref: '#/components/schemas/Brand'
+          description: Second brand for comparison
+        description: Second brand for comparison
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+          title: Category
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ComparativeTopicResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/alerts:
+    get:
+      tags:
+      - alerts
+      summary: List Alerts
+      description: 'Rising negative aspect alerts sorted by severity.
+
+        Use ?acknowledged=false for active alerts, ?acknowledged=true for history.
+
+        Use ?platforms=reddit&platforms=amazon to filter by source platform.'
+      operationId: list_alerts_api_alerts_get
+      parameters:
+      - name: brand
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Brand'
+          - type: 'null'
+          title: Brand
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+          title: Category
+      - name: acknowledged
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          description: Filter by acknowledged state. ?acknowledged=false for active,
+            ?acknowledged=true for history
+          title: Acknowledged
+        description: Filter by acknowledged state. ?acknowledged=false for active,
+          ?acknowledged=true for history
+      - name: platforms
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              $ref: '#/components/schemas/SourcePlatform'
+          - type: 'null'
+          description: Filter alerts to those involving any of the specified platforms
+          title: Platforms
+        description: Filter alerts to those involving any of the specified platforms
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertListResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/alerts/{alert_id}/acknowledge:
+    patch:
+      tags:
+      - alerts
+      summary: Acknowledge Alert
+      description: Mark an alert as acknowledged.
+      operationId: acknowledge_alert_api_alerts__alert_id__acknowledge_patch
+      parameters:
+      - name: alert_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Alert Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AlertAcknowledgeResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /api/simulate:
+    post:
+      tags:
+      - simulator
+      summary: Run Simulation
+      description: 'Simulate consumer segment reactions to a hypothetical scenario.
+
+
+        Grounds the LLM in real mention data ¡ª passes 5-10 actual consumer reviews
+
+        as context so the LLM reasons over observed consumer text, not product names
+        alone.
+
+
+        Caches by (scenario, product_model, filter_context_hash) to prevent cost blowup.
+
+        Times out at 30 seconds with a structured error response.
+
+
+        NOTE: This is a simulation, not a measurement. The overall_disclaimer field
+
+        makes this explicit per charter ¡ì6.2 anti-theater requirements.'
+      operationId: run_simulation_api_simulate_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationResult'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /health:
+    get:
+      tags:
+      - health
+      summary: Health Check
+      description: Smoke-test endpoint.
+      operationId: health_check_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                additionalProperties: true
+                type: object
+                title: Response Health Check Health Get
+components:
+  schemas:
+    AlertAcknowledgeResponse:
+      properties:
+        alert_id:
+          type: string
+          title: Alert Id
+        acknowledged:
+          type: boolean
+          title: Acknowledged
+      type: object
+      required:
+      - alert_id
+      - acknowledged
+      title: AlertAcknowledgeResponse
+    AlertEvent:
+      properties:
+        alert_id:
+          type: string
+          title: Alert Id
+        product_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Product Model
+        brand:
+          $ref: '#/components/schemas/Brand'
+        aspect:
+          type: string
+          title: Aspect
+        severity:
+          type: number
+          title: Severity
+          description: Composite severity score
+        score_drop:
+          type: number
+          title: Score Drop
+          description: How much the aspect score dropped
+        triggered_at:
+          type: string
+          format: date-time
+          title: Triggered At
+        acknowledged:
+          type: boolean
+          title: Acknowledged
+          default: false
+        exemplar_mentions:
+          items:
+            $ref: '#/components/schemas/Mention'
+          type: array
+          title: Exemplar Mentions
+        platforms:
+          items:
+            $ref: '#/components/schemas/SourcePlatform'
+          type: array
+          title: Platforms
+          description: Distinct set of source platforms from exemplar_mentions[*].source_platform
+      type: object
+      required:
+      - alert_id
+      - brand
+      - aspect
+      - severity
+      - score_drop
+      - triggered_at
+      title: AlertEvent
+    AlertListResponse:
+      properties:
+        total:
+          type: integer
+          title: Total
+        items:
+          items:
+            $ref: '#/components/schemas/AlertEvent'
+          type: array
+          title: Items
+      type: object
+      required:
+      - total
+      - items
+      title: AlertListResponse
+    AspectSentiment:
+      properties:
+        name:
+          type: string
+          title: Name
+          description: Canonical aspect name, e.g. 'suction', 'battery', 'brushroll'
+        polarity:
+          $ref: '#/components/schemas/Polarity'
+        score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Score
+        confidence:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Confidence
+        snippet:
+          type: string
+          title: Snippet
+          description: Text fragment that triggered this aspect extraction
+      type: object
+      required:
+      - name
+      - polarity
+      - score
+      - confidence
+      - snippet
+      title: AspectSentiment
+    AspectTrend:
+      properties:
+        aspect:
+          type: string
+          title: Aspect
+          description: Canonical aspect name
+        mention_count:
+          type: integer
+          title: Mention Count
+        avg_score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Avg Score
+        trend_delta:
+          type: number
+          title: Trend Delta
+          description: 30-day score change
+        severity:
+          type: number
+          title: Severity
+          description: volume x magnitude x recency composite
+        sparkline:
+          items:
+            type: number
+          type: array
+          title: Sparkline
+          description: Weekly scores, most recent last
+      type: object
+      required:
+      - aspect
+      - mention_count
+      - avg_score
+      - trend_delta
+      - severity
+      - sparkline
+      title: AspectTrend
+    Brand:
+      type: string
+      enum:
+      - shark
+      - ninja
+      - dyson
+      - irobot
+      - roborock
+      - kitchenaid
+      - breville
+      - cuisinart
+      - keurig
+      - delonghi
+      - other
+      title: Brand
+    BrandShare:
+      properties:
+        brand:
+          $ref: '#/components/schemas/Brand'
+        mention_count:
+          type: integer
+          title: Mention Count
+        share:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Share
+          description: Fraction of total mentions
+      type: object
+      required:
+      - brand
+      - mention_count
+      - share
+      title: BrandShare
+    Category:
+      type: string
+      enum:
+      - robot_vacuum
+      - cordless_stick
+      - upright
+      - air_fryer
+      - pressure_cooker
+      - blender
+      - ice_cream_maker
+      - coffee
+      - air_purifier
+      - hair_tool
+      - other
+      title: Category
+    ComparativePair:
+      properties:
+        brand:
+          $ref: '#/components/schemas/Brand'
+        aspect:
+          type: string
+          title: Aspect
+          description: Canonical aspect name
+        polarity:
+          $ref: '#/components/schemas/Polarity'
+        score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Score
+      type: object
+      required:
+      - brand
+      - aspect
+      - polarity
+      - score
+      title: ComparativePair
+    ComparativeTopicResponse:
+      properties:
+        brand_a:
+          $ref: '#/components/schemas/Brand'
+        brand_b:
+          $ref: '#/components/schemas/Brand'
+        share_of_aspect:
+          items:
+            $ref: '#/components/schemas/ShareOfAspect'
+          type: array
+          title: Share Of Aspect
+      type: object
+      required:
+      - brand_a
+      - brand_b
+      - share_of_aspect
+      title: ComparativeTopicResponse
+    DerivedSentiment:
+      properties:
+        overall_sentiment:
+          $ref: '#/components/schemas/SentimentLabel'
+        compound_score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Compound Score
+          description: Single scalar for charting
+        confidence:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Confidence
+          description: Pipeline confidence in this result
+        sarcasm_flag:
+          type: boolean
+          title: Sarcasm Flag
+          description: True if sarcasm heuristics fired
+        aspects:
+          items:
+            $ref: '#/components/schemas/AspectSentiment'
+          type: array
+          title: Aspects
+        comparative_pairs:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ComparativePair'
+            type: array
+          - type: 'null'
+          title: Comparative Pairs
+          description: Only populated when a comparative claim is detected
+      type: object
+      required:
+      - overall_sentiment
+      - compound_score
+      - confidence
+      - sarcasm_flag
+      title: DerivedSentiment
+    ForecastPoint:
+      properties:
+        date:
+          type: string
+          title: Date
+          description: ISO date YYYY-MM-DD
+        projected_score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Projected Score
+        confidence_lower:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Confidence Lower
+        confidence_upper:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Confidence Upper
+      type: object
+      required:
+      - date
+      - projected_score
+      - confidence_lower
+      - confidence_upper
+      title: ForecastPoint
+    ForecastResponse:
+      properties:
+        product_model:
+          type: string
+          title: Product Model
+        historical:
+          items:
+            $ref: '#/components/schemas/TimeseriesPoint'
+          type: array
+          title: Historical
+        forecast:
+          items:
+            $ref: '#/components/schemas/ForecastPoint'
+          type: array
+          title: Forecast
+        method_label:
+          type: string
+          title: Method Label
+          description: Human-readable label for the forecasting method used
+        input_mention_count:
+          type: integer
+          title: Input Mention Count
+        input_window_days:
+          type: integer
+          title: Input Window Days
+        low_confidence:
+          type: boolean
+          title: Low Confidence
+          description: True when mention_count < 50 OR window_days < 14
+        caveats:
+          items:
+            type: string
+          type: array
+          title: Caveats
+          description: Reasons for low confidence or forecast limitations
+      type: object
+      required:
+      - product_model
+      - historical
+      - forecast
+      - method_label
+      - input_mention_count
+      - input_window_days
+      - low_confidence
+      title: ForecastResponse
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    Mention:
+      properties:
+        mention_id:
+          type: string
+          title: Mention Id
+          description: Stable UUID identifier
+        source_platform:
+          $ref: '#/components/schemas/SourcePlatform'
+        source_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Url
+          description: URL to original mention; null for closed sources
+        author_handle:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Author Handle
+          description: Anonymized/hashed author handle
+        posted_at:
+          type: string
+          format: date-time
+          title: Posted At
+          description: When the mention was published (UTC)
+        ingested_at:
+          type: string
+          format: date-time
+          title: Ingested At
+          description: When our pipeline processed it (UTC)
+        brand:
+          $ref: '#/components/schemas/Brand'
+        category:
+          $ref: '#/components/schemas/Category'
+        product_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Product Model
+          description: Specific SKU name if available
+        text:
+          type: string
+          title: Text
+          description: Raw mention text, pre-NLP
+        rating:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Rating
+          description: Source-provided star rating if available
+        language:
+          type: string
+          title: Language
+          description: ISO-639-1 language code
+          default: en
+        derived:
+          $ref: '#/components/schemas/DerivedSentiment'
+        record_type:
+          type: string
+          enum:
+          - review
+          - recall
+          title: Record Type
+          description: '''review'' for normal mentions; ''recall'' for CPSC recall
+            records'
+          default: review
+      type: object
+      required:
+      - mention_id
+      - source_platform
+      - posted_at
+      - ingested_at
+      - brand
+      - category
+      - text
+      - derived
+      title: Mention
+    MentionFilter:
+      properties:
+        platform:
+          anyOf:
+          - $ref: '#/components/schemas/SourcePlatform'
+          - type: 'null'
+        brand:
+          anyOf:
+          - $ref: '#/components/schemas/Brand'
+          - type: 'null'
+        category:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+        product_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Product Model
+        date_from:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Date From
+        date_to:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Date To
+        limit:
+          type: integer
+          maximum: 1000.0
+          minimum: 1.0
+          title: Limit
+          default: 100
+        offset:
+          type: integer
+          minimum: 0.0
+          title: Offset
+          default: 0
+        topic_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Topic Id
+          description: Filter mentions by topic cluster ID
+      type: object
+      title: MentionFilter
+    MentionListResponse:
+      properties:
+        total:
+          type: integer
+          title: Total
+        items:
+          items:
+            $ref: '#/components/schemas/Mention'
+          type: array
+          title: Items
+      type: object
+      required:
+      - total
+      - items
+      title: MentionListResponse
+    OverviewKPIs:
+      properties:
+        total_mentions:
+          type: integer
+          title: Total Mentions
+        overall_score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Overall Score
+        wow_delta:
+          type: number
+          title: Wow Delta
+          description: Week-over-week score change
+        top_rising_negative:
+          items:
+            type: string
+          type: array
+          title: Top Rising Negative
+          description: Aspect names with worst score drops
+        top_rising_positive:
+          items:
+            type: string
+          type: array
+          title: Top Rising Positive
+          description: Aspect names with best score gains
+      type: object
+      required:
+      - total_mentions
+      - overall_score
+      - wow_delta
+      - top_rising_negative
+      - top_rising_positive
+      title: OverviewKPIs
+    PlatformAspectCell:
+      properties:
+        platform:
+          $ref: '#/components/schemas/SourcePlatform'
+        aspect:
+          type: string
+          title: Aspect
+        sentiment_score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Sentiment Score
+        mention_count:
+          type: integer
+          title: Mention Count
+      type: object
+      required:
+      - platform
+      - aspect
+      - sentiment_score
+      - mention_count
+      title: PlatformAspectCell
+    PlatformComparisonResponse:
+      properties:
+        grid:
+          items:
+            $ref: '#/components/schemas/PlatformAspectCell'
+          type: array
+          title: Grid
+        top_topics_by_platform:
+          additionalProperties:
+            items:
+              type: string
+            type: array
+          type: object
+          title: Top Topics By Platform
+          description: platform -> top topic labels
+      type: object
+      required:
+      - grid
+      - top_topics_by_platform
+      title: PlatformComparisonResponse
+    Polarity:
+      type: string
+      enum:
+      - positive
+      - negative
+      - neutral
+      - mixed
+      title: Polarity
+    ProductAspectResponse:
+      properties:
+        product_model:
+          type: string
+          title: Product Model
+        brand:
+          $ref: '#/components/schemas/Brand'
+        category:
+          $ref: '#/components/schemas/Category'
+        aspects:
+          items:
+            $ref: '#/components/schemas/AspectTrend'
+          type: array
+          title: Aspects
+        exemplar_mentions:
+          items:
+            $ref: '#/components/schemas/Mention'
+          type: array
+          title: Exemplar Mentions
+      type: object
+      required:
+      - product_model
+      - brand
+      - category
+      - aspects
+      - exemplar_mentions
+      title: ProductAspectResponse
+    ProductSummary:
+      properties:
+        brand:
+          $ref: '#/components/schemas/Brand'
+        category:
+          $ref: '#/components/schemas/Category'
+        product_model:
+          type: string
+          title: Product Model
+        overall_score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Overall Score
+        mention_count:
+          type: integer
+          title: Mention Count
+      type: object
+      required:
+      - brand
+      - category
+      - product_model
+      - overall_score
+      - mention_count
+      title: ProductSummary
+    SentimentLabel:
+      type: string
+      enum:
+      - positive
+      - negative
+      - neutral
+      - mixed
+      title: SentimentLabel
+    ShareOfAspect:
+      properties:
+        brand:
+          $ref: '#/components/schemas/Brand'
+        aspect:
+          type: string
+          title: Aspect
+        mention_share:
+          type: number
+          maximum: 1.0
+          minimum: 0.0
+          title: Mention Share
+          description: Fraction of all mentions for this aspect
+        avg_score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Avg Score
+      type: object
+      required:
+      - brand
+      - aspect
+      - mention_share
+      - avg_score
+      title: ShareOfAspect
+    ShareOfVoiceResponse:
+      properties:
+        total_mentions:
+          type: integer
+          title: Total Mentions
+        brands:
+          items:
+            $ref: '#/components/schemas/BrandShare'
+          type: array
+          title: Brands
+      type: object
+      required:
+      - total_mentions
+      - brands
+      title: ShareOfVoiceResponse
+    SimulatedSegment:
+      properties:
+        segment_label:
+          type: string
+          title: Segment Label
+          description: Consumer segment label, e.g. 'Price-sensitive first-time buyers'
+        predicted_reaction:
+          type: string
+          enum:
+          - positive
+          - negative
+          - mixed
+          - neutral
+          title: Predicted Reaction
+        confidence_narrative:
+          type: string
+          title: Confidence Narrative
+          description: Plain English 2-3 sentence explanation of why this segment
+            reacts this way
+        key_quotes_used:
+          items:
+            type: string
+          type: array
+          title: Key Quotes Used
+          description: Actual review text snippets from grounding mentions that informed
+            this segment
+      type: object
+      required:
+      - segment_label
+      - predicted_reaction
+      - confidence_narrative
+      title: SimulatedSegment
+    SimulationRequest:
+      properties:
+        scenario:
+          type: string
+          title: Scenario
+          description: Natural language scenario, e.g. 'What if Shark launched a $99
+            budget version?'
+        product_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Product Model
+          description: Product context anchor ¡ª filters grounding mentions to this
+            SKU if provided
+        filter_context:
+          anyOf:
+          - $ref: '#/components/schemas/MentionFilter'
+          - type: 'null'
+          description: Current dashboard filter state for grounding mention selection
+      type: object
+      required:
+      - scenario
+      title: SimulationRequest
+    SimulationResult:
+      properties:
+        scenario:
+          type: string
+          title: Scenario
+          description: Echo of the input scenario
+        product_model:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Product Model
+        segments:
+          items:
+            $ref: '#/components/schemas/SimulatedSegment'
+          type: array
+          title: Segments
+          description: 3-5 consumer segments with predicted reactions
+        overall_disclaimer:
+          type: string
+          title: Overall Disclaimer
+          description: 'Anti-theater honesty label. MUST contain: ''Simulated reaction
+            based on LLM heuristic, not empirical behavior modeling.'''
+          default: Simulated reaction based on LLM heuristic, not empirical behavior
+            modeling.
+        model_used:
+          type: string
+          title: Model Used
+          description: LLM model ID used for this simulation
+        tokens_consumed:
+          type: integer
+          title: Tokens Consumed
+          description: Total tokens used (prompt + completion)
+      type: object
+      required:
+      - scenario
+      - segments
+      - model_used
+      - tokens_consumed
+      title: SimulationResult
+    SourcePlatform:
+      type: string
+      enum:
+      - reddit
+      - amazon
+      - youtube
+      - trustpilot
+      - twitter
+      - other
+      title: SourcePlatform
+    TimeseriesPoint:
+      properties:
+        date:
+          type: string
+          title: Date
+          description: ISO date YYYY-MM-DD
+        score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Score
+        mention_count:
+          type: integer
+          title: Mention Count
+      type: object
+      required:
+      - date
+      - score
+      - mention_count
+      title: TimeseriesPoint
+    TimeseriesResponse:
+      properties:
+        series:
+          items:
+            $ref: '#/components/schemas/TimeseriesPoint'
+          type: array
+          title: Series
+        brand:
+          anyOf:
+          - $ref: '#/components/schemas/Brand'
+          - type: 'null'
+        category:
+          anyOf:
+          - $ref: '#/components/schemas/Category'
+          - type: 'null'
+      type: object
+      required:
+      - series
+      title: TimeseriesResponse
+    TopicCluster:
+      properties:
+        topic_id:
+          type: string
+          title: Topic Id
+        label:
+          type: string
+          title: Label
+        mention_count:
+          type: integer
+          title: Mention Count
+        avg_score:
+          type: number
+          maximum: 1.0
+          minimum: -1.0
+          title: Avg Score
+        momentum:
+          type: number
+          title: Momentum
+          description: Recent growth rate
+        exemplar_quotes:
+          items:
+            type: string
+          type: array
+          title: Exemplar Quotes
+        trend:
+          items:
+            $ref: '#/components/schemas/TimeseriesPoint'
+          type: array
+          title: Trend
+        is_novel:
+          type: boolean
+          title: Is Novel
+          description: True when momentum > 0.3, mention_count < 25, and first_seen_at
+            within last 14 days
+          default: false
+      type: object
+      required:
+      - topic_id
+      - label
+      - mention_count
+      - avg_score
+      - momentum
+      - exemplar_quotes
+      - trend
+      title: TopicCluster
+    TopicExplorerResponse:
+      properties:
+        topics:
+          items:
+            $ref: '#/components/schemas/TopicCluster'
+          type: array
+          title: Topics
+      type: object
+      required:
+      - topics
+      title: TopicExplorerResponse
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError

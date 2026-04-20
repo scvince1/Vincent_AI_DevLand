@@ -1,0 +1,260 @@
+═══ Vincent ═══
+
+我现在生成 Dashboard 是不是用的不是 Horses 里的 Skill？
+
+你可以看一下，我在 Horses 的那个系统里有一个生成 Dashboard 的 Skill，研究一下那个 Skill 有没有可能借鉴到我们的这个系统里来。
+
+这样在生成 Dashboard 的时候，就可以不用读写都发生在主 Session 了。还是说我们现在读写已经不发生在主 Session 了？
+
+因为我是不想让你每一次更新 Dashboard 都是从头去做一遍格式之类的，太麻烦了。
+
+═══ 凌喵 ═══
+
+现在 MeowOS 的情况是：
+
+**文件操作** — 已经走 shell-runner，不在主 session 直接 Read/Edit，这点是对的。
+
+**但没有专用的 Dashboard skill** — Horsys 那边有一个 `horsys-dashboard` skill，它的核心设计是：
+- **只动被传入的字段，其余全部保留原样**
+- 所有其他 skill/agent 调用它来更新 Dashboard，而不是自己去读写
+- 这样每次更新就是「外科手术式」，不是从头重建
+
+MeowOS 目前没有这个机制，所以每次更新 Dashboard 确实可能涉及读全文再重写，这是你的痛点所在。
+
+---
+
+**建议方向**：参照 `horsys-dashboard` 创建一个 `meowos-dashboard` skill，放在 `D:\Ai_Project\MeowOS\.claude\skills\meowos-dashboard\SKILL.md`。
+
+核心逻辑：
+<code block: 3 lines of unknown, 省略>
+
+---
+
+要我现在把 Horsys 的那个 skill 读一遍，然后给 MeowOS 写一个对应版本吗？喵～
+
+═══ Vincent ═══
+
+你能不能去想一下我们这个 Dashboard 应该怎么写，需不需要这样的一个 Skill？
+
+═══ 凌喵 ═══
+
+现在我对三个文件都有了清晰的认识。先问第一个问题：
+
+你说"每次更新 Dashboard 都是从头做一遍格式"——具体是哪个场景最让你痛？
+
+- **A. 今日日程** — 每次排班都要重新生成整张表格
+- **B. Todo** — 加一条 / 打勾 的时候，凌喵把整个 Todo 区重写了
+- **C. 健身区块** — 训练后更新，需要重建整个健身表
+- **D. 以上都有** / 说不清楚，反正每次都感觉在全文重写
+
+═══ Vincent ═══
+
+D.
+
+═══ 凌喵 ═══
+
+好，全都有。第二个问题：
+
+Dashboard 更新时，你理想中的感觉是哪种？
+
+- **A. 凌喵说"我去更新 Dashboard"，然后就更新好了** — 主 session 不做任何文件操作，全部委派出去，就像调用一个黑盒
+- **B. 凌喵负责决定改什么，再让 shell-runner 去执行写入** — 主 session 参与"计算"，但不做 I/O
+- **C. 我不在乎内部怎么跑，我只想结果正确、格式不乱** — 实现方式随你
+
+═══ Vincent ═══
+
+C, 但是我需要token使用尽量低
+
+═══ 凌喵 ═══
+
+好，Token 效率优先。这里有三个方向，先说结论再讲细节：
+
+---
+
+**推荐：方案 B — 专用 `dashboard-updater` agent（放在 `90_Agents/`）**
+
+---
+
+### 方案 A · Claude Code Skill（仿 Horsys）
+
+主 session 调用 `Skill: meowos-dashboard`，传入结构化 diff，skill 内部调 shell-runner 写文件。
+
+- 优点：和 Horsys 架构一致，格式知识集中
+- **缺点：skill 内容每次调用都加载进主 session，消耗 token**
+
+---
+
+### 方案 B · 专用 Agent（推荐）
+
+在 `90_Agents/` 建一个 `dashboard-updater` agent prompt。
+主 session 只发一条结构化小消息（delta），agent 独立完成读→改→写，主 session 全程不碰 Dashboard 内容。
+
+<code block: 2 lines of unknown, 省略>
+
+- **优点：主 session token 消耗最低，Dashboard 内容完全不进主 session，格式知识集中在一个文件**
+- 缺点：不能直接用 Skill tool 调用，走 Agent tool
+
+---
+
+### 方案 C · 增强 shell-runner 指令（最简单，不推荐）
+
+每次写 Dashboard 时直接给 shell-runner 更详细的指令。不建新文件。
+
+- 优点：零基础设施改动
+- **缺点：格式知识分散在每个调用方的 prompt 里，改格式就要改多处**
+
+---
+
+**我推方案 B 的理由：** Token 最省（主 session 永远不读 Dashboard 原文）+ 格式知识只住一个地方 + 和现有 `90_Agents/` 体系一致，不引入新基础设施。
+
+你倾向哪个？喵～
+
+═══ Vincent ═══
+
+B
+
+═══ 凌喵 ═══
+
+好，开始设计。分三段呈现，每段确认再继续。喵～
+
+---
+
+## 第一段：整体架构
+
+**新文件：** `D:\Ai_Project\MeowOS\90_Agents\dashboard-updater.md`
+
+**角色定位：** Dashboard 的唯一写入者。所有需要改 Dashboard 的地方（主 session、其他 agent）都通过 Agent tool 调它，传一个结构化 delta，它独立完成「读→改→写」，返回一行确认。
+
+**调用方式（统一）：**
+<code block: 8 lines of unknown, 省略>
+
+**变化：**
+- 01_Routing.md 中「主入口直接处理（写入 Dashboard）」→ 改为「→ dashboard-updater」
+- daily-review / scheduler / fitness-advisor 等 agent 的 prompt 末尾统一加：「更新 Dashboard 时调 dashboard-updater，不直接写文件」
+
+这段架构方向对吗？
+
+═══ Vincent ═══
+
+好
+
+═══ 凌喵 ═══
+
+## 第二段：支持的 Action 类型
+
+`dashboard-updater` 需要能处理 Dashboard 里所有会变的区块：
+
+| Action | 触发场景 | 行为 |
+|--------|---------|------|
+| `update_timestamp` | 任何更新后 | 改第2行 `_凌喵 · 上次更新:_` |
+| `replace_schedule` | scheduler 排完日程 | 整体替换 `## 今日日程` 区块 |
+| `upsert_近期日程` | 添加/修改近期事件 | 按日期 upsert `## 近期日程` 下的子区块 |
+| `add_todo` | "加一条" | 在指定 initiative 分组末尾追加一行 |
+| `complete_todo` | "打勾 / 做完了" | 找到匹配项，加 ~~删除线~~ 或移到「已完成」 |
+| `replace_fitness` | 训练后更新 | 整体替换 `## 健身` 区块内容 |
+| `upsert_section` | 通用 | 按标题名替换任意区块 |
+
+**规则：**
+- 每次调用可传多个 action（比如 `replace_schedule` + `update_timestamp` 一起）
+- 没传的区块原封不动
+- `update_timestamp` 如果传了其他 action，自动附带，不需要显式传
+
+这些 action 够用吗？有没有漏掉的更新场景？
+
+═══ Vincent ═══
+
+你觉得基于我们这些天的使用，我需要加什么东西？
+
+═══ 凌喵 ═══
+
+基于 Dashboard 内容和使用模式，我看到两个明显的缺口：
+
+---
+
+**补充 1：`update_schedule_status`（必须加）**
+
+`今日日程` 表格有状态列（⬜ 待办）。daily-review 签到时你会逐条打勾，但现在 action 列表里只有 `replace_schedule`（全表重建）和 `complete_todo`（Todo 区）。
+
+缺一个「把第 N 行状态改成 ✅」的外科手术动作，否则每次打勾都要重建整张日程表。
+
+---
+
+**补充 2：`sync_fitness`（推荐加）**
+
+目前训练后要同时更新 `_state.md` + Dashboard `## 健身` 区块。
+
+与其让调用方传整张重建好的健身表，不如：调用方只告诉 dashboard-updater「今天练了什么」，agent 自己去读 `_state.md`，重建健身区块写回 Dashboard。
+
+这样健身数据的 source of truth 永远是 `_state.md`，Dashboard 是派生视图。
+
+---
+
+**还有一个防护性规则：**
+
+`replace_schedule` 时，`今日日程` 下面的 `> ⚠️` 注释块要能被保留或随表一起替换，而不是静默丢失。
+
+---
+
+这三点加进去吗？还是有你觉得更重要的？
+
+═══ Vincent ═══
+
+好, 放进去
+
+═══ 凌喵 ═══
+
+好，那最终完整设计如下，确认后写 spec：
+
+---
+
+## 完整设计汇总
+
+**文件：** `D:\Ai_Project\MeowOS\90_Agents\dashboard-updater.md`
+
+**职责：** Dashboard 唯一写入者。读→改→写全程在自己的 context 里完成，主 session 只传 delta。
+
+---
+
+### 支持的 Action（最终版）
+
+| Action | 行为 |
+|--------|------|
+| `update_timestamp` | 更新第2行时间戳（其他 action 自动附带，无需显式传） |
+| `replace_schedule` | 整体替换 `## 今日日程` 表格；保留表格下方 `> ⚠️` 注释块，除非调用方显式传入新注释 |
+| `update_schedule_status` | 按关键词匹配行，更新状态列（⬜→✅ 或指定值），不动其余内容 |
+| `upsert_近期日程` | 按日期 upsert `## 近期日程` 子区块 |
+| `add_todo` | 在指定 initiative 分组末尾追加一行 |
+| `complete_todo` | 找到匹配项加 ~~删除线~~ |
+| `sync_fitness` | 读 `_state.md`，重建 `## 健身` 区块写入 Dashboard |
+| `upsert_section` | 按标题名替换任意区块（通用兜底） |
+
+---
+
+### 调用方变更
+
+- `01_Routing.md`：`新增 / 完成 / 打勾` → 改为路由到 dashboard-updater
+- 其他 agent（daily-review / scheduler / fitness-advisor）：prompt 末尾加「更新 Dashboard 时调 dashboard-updater」
+
+---
+
+这个设计你认可吗？认可的话我写 spec 文档。
+
+═══ Vincent ═══
+
+不用写 spec 文档了，直接发下去执行
+
+═══ 凌喵 ═══
+
+全部完成。喵～
+
+**新增：**
+- [90_Agents/dashboard-updater.md](D:\Ai_Project\MeowOS\90_Agents\dashboard-updater.md) — 8 个 action，Dashboard 唯一写入者
+
+**修改：**
+- [01_Routing.md](D:\Ai_Project\MeowOS\90_Agents\01_Routing.md) — 新增/完成/打勾 → 路由到 dashboard-updater
+- [dump-processor.md](D:\Ai_Project\MeowOS\90_Agents\dump-processor.md) — Step 3 改调 dashboard-updater
+- [scheduler.md](D:\Ai_Project\MeowOS\90_Agents\scheduler.md) — Step 4 改调 dashboard-updater
+- [daily-review.md](D:\Ai_Project\MeowOS\90_Agents\daily-review.md) — 处理未完成项 + 时间戳更新 改调 dashboard-updater
+- [fitness-advisor.md](D:\Ai_Project\MeowOS\90_Agents\fitness-advisor.md) — Step 5 健身区块改调 sync_fitness
+
+现在任何 Dashboard 更新，主 session 只传一个小 delta，格式知识全住在 dashboard-updater 里。

@@ -1,0 +1,11 @@
+═══ Vincent ═══
+
+I'm designing a CLI tool that helps developers track TODO comments across
+their codebase. Create an agent team to explore this from different angles: one
+teammate on UX, one on technical architecture, one playing devil's advocate.DO NOT USE SUPERPOWER skill.
+
+═══ 凌喵 ═══
+
+喵～又来挖坟人了，说吧文森特。
+
+我派三只小分队并行去探这个 CLI TODO tracker，各自独立思考，互不串味儿。

@@ -1,0 +1,19 @@
+═══ Vincent ═══
+
+Can you see the hooks of inject time.py?
+
+═══ 凌喵 ═══
+
+找到了。文件在 [inject_datetime.py](C:\Users\scvin\.claude\inject_datetime.py)。
+
+**功能：** 在每个 Session/Subagent 启动时注入当前时间到 context。
+
+**核心逻辑：**
+- 读取 stdin 的 hook 数据
+- 获取本地时区的当前时间，格式化为 `[系统时间] YYYY-MM-DD HH:MM 周X (时区: ...)`
+- 拼接到 `additionalContext` 的开头，输出回 JSON
+
+**Hook 配置（settings.json）：**
+- `SessionStart` → 每次会话开始触发
+- `SubagentStart` → 每次子 Agent 启动触发
+- 两者都用同一脚本，确保主 Agent 和子 Agent 都能感知时间，且每个 context 只注入一次
