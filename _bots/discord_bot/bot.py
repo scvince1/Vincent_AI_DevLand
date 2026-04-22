@@ -147,6 +147,10 @@ try:
 except Exception as _e:
     BOT_CONFIG = dict(_DEFAULT_BOT_CONFIG)
 
+REACTION_SEEN = BOT_CONFIG["reaction_palette"]["seen"]
+REACTION_DONE = BOT_CONFIG["reaction_palette"]["done"]
+REACTION_ERROR = BOT_CONFIG["reaction_palette"]["error"]
+
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 
 
