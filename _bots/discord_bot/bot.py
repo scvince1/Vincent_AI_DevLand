@@ -247,10 +247,14 @@ PEER_BOT_IDS = {1495949198976221204, 1496244303834648596, 1496284605194436768}
 # Passive engagement (public channel chime-in)
 # Home channel = Kestrel's own territory (50% dice)
 # Friend channel = other bots' home (10% dice — don't crowd them)
-PASSIVE_CHANNEL_NAMES = {BOT_CONFIG.get("home_channel", "Kestrel")}
-FRIEND_BOT_CHANNELS = {"猫爬架", "马厩", "北辰"}
+_home_ch = BOT_CONFIG.get("home_channel", "watch-tower")
+PASSIVE_CHANNEL_NAMES = {_home_ch, f"🦅-{_home_ch}", "watch-tower", "🦅-watch-tower"}
+FRIEND_BOT_CHANNELS = {"猫爬架", "😺-猫爬架", "马厩", "🐎-马厩", "正北", "🧭-正北"}
+# Commons channels = shared public where all bots chime in at 30% each (independent rolls)
+COMMONS_CHANNELS = {"🏛️-公会大厅", "公会大厅"}
 PASSIVE_ENGAGE_P_HOME = 0.50
 PASSIVE_ENGAGE_P_FRIEND = 0.10
+PASSIVE_ENGAGE_P_COMMONS = 0.30
 TYPING_SETTLE_SECONDS = 15.0
 TYPING_SETTLE_MAX_SECONDS = 180.0
 _channel_typing: dict[int, float] = {}
@@ -1198,6 +1202,9 @@ async def handle_message(msg: discord.Message):
         if ch_name in PASSIVE_CHANNEL_NAMES:
             dice_p = PASSIVE_ENGAGE_P_HOME
             channel_role = "home"
+        elif ch_name in COMMONS_CHANNELS:
+            dice_p = PASSIVE_ENGAGE_P_COMMONS
+            channel_role = "commons"
         elif ch_name in FRIEND_BOT_CHANNELS:
             dice_p = PASSIVE_ENGAGE_P_FRIEND
             channel_role = "friend"
