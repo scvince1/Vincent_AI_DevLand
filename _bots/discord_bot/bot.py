@@ -29,10 +29,12 @@ Features:
     Windows: start_kestrel.bat        或  python bot.py
 """
 import asyncio
+import atexit
 import json
 import logging
 import os
 import random
+import re
 import subprocess
 import sys
 from datetime import datetime
@@ -110,6 +112,17 @@ from kestrel_mcp import (
 # ---------------- Config ----------------
 HERE = Path(__file__).resolve().parent
 load_dotenv(HERE / ".env")
+
+
+# ---------------- Channel name helpers ----------------
+# Strip leading emoji(s) + optional separator from Discord channel names so
+# "🦅-watch-tower" and "watch-tower" both match the same base name. Ranges
+# cover the common Unicode emoji blocks + misc symbols + VS16 selector.
+_LEADING_EMOJI_RE = re.compile(r'^[\U0001F300-\U0001FAFF☀-➿⬀-⯿️]+[\s\-]*')
+
+
+def strip_leading_emoji(name: str) -> str:
+    return _LEADING_EMOJI_RE.sub('', name or '').strip()
 
 # Bot-wide static config (checked into git, no secrets).
 # Controls identity, home channel, optional integration paths, and UX knobs.
@@ -227,6 +240,56 @@ logging.basicConfig(
 log = logging.getLogger("kestrelbot")
 
 
+# ---------------- Singleton PID lock (cross-platform) ----------------
+# Prevents two bot.py processes from running against the same Discord
+# identity (which would cause duplicate responses + session corruption).
+# Cross-platform: uses Win32 OpenProcess on Windows, POSIX signal 0 on
+# macOS/Linux. On Mac, launchd KeepAlive will respawn after a clean exit;
+# any accidental second job loses this race and exits.
+PID_FILE = HERE / "bot.pid"
+
+
+def _pid_alive(pid: int) -> bool:
+    if sys.platform == "win32":
+        import ctypes
+        PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+        STILL_ACTIVE = 259
+        h = ctypes.windll.kernel32.OpenProcess(
+            PROCESS_QUERY_LIMITED_INFORMATION, 0, pid
+        )
+        if h == 0:
+            return False
+        exit_code = ctypes.c_ulong(0)
+        ctypes.windll.kernel32.GetExitCodeProcess(h, ctypes.byref(exit_code))
+        ctypes.windll.kernel32.CloseHandle(h)
+        return exit_code.value == STILL_ACTIVE
+    else:
+        try:
+            os.kill(pid, 0)  # POSIX: signal 0 doesn't kill, only probes
+            return True
+        except (OSError, ProcessLookupError):
+            return False
+
+
+def acquire_singleton():
+    if PID_FILE.exists():
+        try:
+            old_pid = int(PID_FILE.read_text().strip())
+            if _pid_alive(old_pid) and old_pid != os.getpid():
+                log.warning(
+                    "[singleton] PID %s still running, exiting to avoid dupe instance",
+                    old_pid,
+                )
+                sys.exit(0)
+        except (ValueError, FileNotFoundError):
+            pass
+    PID_FILE.write_text(str(os.getpid()))
+    atexit.register(lambda: PID_FILE.unlink(missing_ok=True))
+
+
+acquire_singleton()
+
+
 # ---------------- Session persistence ----------------
 def load_sessions() -> dict:
     if SESSION_STORE.exists():
@@ -306,11 +369,13 @@ PEER_BOT_IDS = {1495949198976221204, 1496244303834648596, 1496284605194436768}
 # Passive engagement (public channel chime-in)
 # Home channel = Kestrel's own territory (50% dice)
 # Friend channel = other bots' home (10% dice — don't crowd them)
-_home_ch = BOT_CONFIG.get("home_channel", "watch-tower")
-PASSIVE_CHANNEL_NAMES = {_home_ch, f"🦅-{_home_ch}", "watch-tower", "🦅-watch-tower"}
-FRIEND_BOT_CHANNELS = {"猫爬架", "😺-猫爬架", "马厩", "🐎-马厩", "正北", "🧭-正北"}
+# Match on emoji-stripped BASE names so renames (e.g. adding a leading
+# emoji) don't break passive routing.
+_home_base = strip_leading_emoji(BOT_CONFIG.get("home_channel", "watch-tower"))
+PASSIVE_BASE_NAMES = {_home_base}
+FRIEND_BOT_BASE_NAMES = {"猫爬架", "马厩", "正北"}
 # Commons channels = shared public where all bots chime in at 30% each (independent rolls)
-COMMONS_CHANNELS = {"🏛️-公会大厅", "公会大厅"}
+COMMONS_BASE_NAMES = {"公会大厅"}
 PASSIVE_ENGAGE_P_HOME = 0.50
 PASSIVE_ENGAGE_P_FRIEND = 0.10
 PASSIVE_ENGAGE_P_COMMONS = 0.30
@@ -1571,14 +1636,24 @@ async def handle_message(msg: discord.Message):
             return
         if msg.author.id not in ALLOWED_USER_IDS:
             return
-        ch_name = msg.channel.name if hasattr(msg.channel, "name") else None
-        if ch_name in PASSIVE_CHANNEL_NAMES:
+        # Thread inherits parent channel's name for routing purposes, so
+        # passive engagement in a thread inside #watch-tower still counts
+        # as "home" and not an unrecognized channel.
+        if isinstance(msg.channel, discord.Thread):
+            parent = msg.channel.parent
+            ch_name = parent.name if parent else msg.channel.name
+        elif hasattr(msg.channel, "name"):
+            ch_name = msg.channel.name
+        else:
+            ch_name = None
+        ch_base = strip_leading_emoji(ch_name) if ch_name else None
+        if ch_base in PASSIVE_BASE_NAMES:
             dice_p = PASSIVE_ENGAGE_P_HOME
             channel_role = "home"
-        elif ch_name in COMMONS_CHANNELS:
+        elif ch_base in COMMONS_BASE_NAMES:
             dice_p = PASSIVE_ENGAGE_P_COMMONS
             channel_role = "commons"
-        elif ch_name in FRIEND_BOT_CHANNELS:
+        elif ch_base in FRIEND_BOT_BASE_NAMES:
             dice_p = PASSIVE_ENGAGE_P_FRIEND
             channel_role = "friend"
         else:
@@ -1871,6 +1946,16 @@ async def on_ready():
         "Connected as %s (bot id %s, host=%s). User map: %s",
         client.user, client.user.id, sys.platform, USER_MAP,
     )
+    # Dump every guild + channel Kestrel can see — useful for debugging
+    # channel-routing mismatches (e.g. emoji-prefixed names vs base names).
+    log.info("[on_ready] Logged in as %s (id=%s)", client.user, client.user.id)
+    for guild in client.guilds:
+        log.info("[on_ready] Guild: %r id=%s", guild.name, guild.id)
+        for ch in guild.channels:
+            log.info(
+                "[on_ready]   %-15s %-40s id=%s",
+                ch.type.name, repr(ch.name), ch.id,
+            )
     # Slash sync: global scope so commands appear in DMs + all guilds
     try:
         synced_global = await tree.sync()
