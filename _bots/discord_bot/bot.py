@@ -100,6 +100,29 @@ except Exception:
 HERE = Path(__file__).resolve().parent
 load_dotenv(HERE / ".env")
 
+# Bot-wide static config (checked into git, no secrets).
+# Controls identity, home channel, optional integration paths, and UX knobs.
+BOT_CONFIG_FILE = HERE / "bot_config.json"
+_DEFAULT_BOT_CONFIG = {
+    "bot_name": "Kestrel",
+    "bot_discord_id": "1496272385215824083",
+    "home_channel": "Kestrel",
+    "system_path": "",
+    "knowledge_root": "",
+    "knowledge_agent_path": "",
+    "peer_notes_dir": "_bots/discord_bot/peer_notes",
+    "channel_history_window": 20,
+    "reaction_palette": {"seen": "🦅", "done": "⚡", "error": "❌"},
+}
+try:
+    if BOT_CONFIG_FILE.exists():
+        _loaded = json.loads(BOT_CONFIG_FILE.read_text(encoding="utf-8"))
+        BOT_CONFIG = {**_DEFAULT_BOT_CONFIG, **_loaded}
+    else:
+        BOT_CONFIG = dict(_DEFAULT_BOT_CONFIG)
+except Exception as _e:
+    BOT_CONFIG = dict(_DEFAULT_BOT_CONFIG)
+
 DISCORD_TOKEN = os.environ["DISCORD_TOKEN"]
 
 
@@ -180,15 +203,16 @@ def save_model_prefs(d: dict) -> None:
     MODEL_PREFS_FILE.write_text(json.dumps(d, indent=2), encoding="utf-8")
 
 
-def get_session_key(user_id: int, channel) -> str:
+def get_session_key(channel) -> str:
     """
-    Session key strategy:
-    - DM or main text channel: keyed by user_id only (user's single session)
-    - Thread: user_id + thread_id (per-user-per-thread, isolated scope)
+    Session key strategy (per-channel, not per-user):
+    - Thread: keyed by thread id
+    - DM / text channel: keyed by channel id
+    All participants in the same channel/thread share one Claude session.
     """
     if isinstance(channel, discord.Thread):
-        return f"{user_id}_thread{channel.id}"
-    return str(user_id)
+        return f"thread_{channel.id}"
+    return f"ch_{channel.id}"
 
 
 # ---------------- Discord client ----------------
@@ -200,14 +224,30 @@ tree = app_commands.CommandTree(client)
 
 # Per-channel debounce state: channel_id -> (latest_msg, timer_task)
 _channel_debounce: dict = {}
-DEBOUNCE_SECONDS = 5.0
+# DM = longer pause (user is often mid-thought in private chat)
+# Public = shorter pause (others may be waiting, don't lag the channel)
+DM_DEBOUNCE_SECONDS = 15.0
+PUBLIC_DEBOUNCE_SECONDS = 5.0
+# Back-compat alias; guild path uses PUBLIC_DEBOUNCE_SECONDS directly.
+DEBOUNCE_SECONDS = PUBLIC_DEBOUNCE_SECONDS
 
 QUIET_HOURS = set(range(0, 8))  # 0-7 local time — no proactive / late-night behaviors
+
+# Peer bot registry — other persona bots in the Vincent ecosystem.
+# Kestrel may receive messages from them (cross-bot routing) or @ them
+# to dispatch work. Her own id is excluded from PEER_BOT_IDS.
+PEER_BOT_META = {
+    1495949198976221204: {"name": "凌喵", "system": "MeowOS (Vincent 的个人 AI 助手)"},
+    1496244303834648596: {"name": "艾莉", "system": "Horsys (Belmont Equine 马术业务)"},
+    1496284605194436768: {"name": "北辰", "system": "NovelOS (写作项目调度)"},
+    1496272385215824083: {"name": "Kestrel", "system": "Mac 侧代理"},
+}
+PEER_BOT_IDS = {1495949198976221204, 1496244303834648596, 1496284605194436768}
 
 # Passive engagement (public channel chime-in)
 # Home channel = Kestrel's own territory (50% dice)
 # Friend channel = other bots' home (10% dice — don't crowd them)
-PASSIVE_CHANNEL_NAMES = {"Kestrel"}
+PASSIVE_CHANNEL_NAMES = {BOT_CONFIG.get("home_channel", "Kestrel")}
 FRIEND_BOT_CHANNELS = {"猫爬架", "马厩", "北辰"}
 PASSIVE_ENGAGE_P_HOME = 0.50
 PASSIVE_ENGAGE_P_FRIEND = 0.10
@@ -676,10 +716,29 @@ def build_sdk_prompt(
     user_map_desc = "\n".join(
         f"    - {mode} (Discord user ID: {uid})" for uid, mode in USER_MAP.items()
     )
+
+    # Author-dispatch hint: who sent this message, so Kestrel knows
+    # whether to answer a human vs a peer bot.
+    author_id = msg.author.id
+    if author_id in PEER_BOT_IDS:
+        peer = PEER_BOT_META[author_id]
+        author_hint = (
+            f"这条消息来自另一只 AI bot: {peer['name']} ({peer['system']}). "
+            f"你是 Kestrel (Vincent 的 Mac 侧代理). 回应简短, "
+            f"必要时可以 @ 对方 bot 派活给她们."
+        )
+    elif author_id == 783473213413523477:
+        author_hint = f"来自 Vincent (Discord ID {author_id})."
+    elif author_id == 323183052064817154:
+        author_hint = f"来自 Joyce (Discord ID {author_id})."
+    else:
+        author_hint = f"来自 unknown (Discord ID {author_id})."
+
     parts = [
         "<discord_context>",
         f"Surface: {channel_kind}",
         f"Active speaker: {kestrel_user} (Discord ID {msg.author.id})",
+        f"Author: {author_hint}",
         "All known users:",
         user_map_desc,
         "Tool available: mcp__discord__dm_user(user_id, content) — proactively DM any user",
@@ -801,11 +860,31 @@ async def _actually_process_guild_mention(msg: discord.Message):
         async for m in msg.channel.history(limit=10, before=msg):
             history_msgs.append(m)
         history_msgs.reverse()
-        channel_history = "\n".join(
+        history_lines = [
             f"{m.author.display_name} ({m.created_at.strftime('%H:%M')}): {m.content[:300]}"
             for m in history_msgs
             if m.content  # skip pure-attachment messages
-        )
+        ]
+        # Thread: inject the parent starter message at the top so a fresh
+        # session still has the thread's seed context.
+        if isinstance(msg.channel, discord.Thread):
+            try:
+                starter = None
+                if msg.channel.parent and msg.channel.id:
+                    # Thread starter message has the same id as the thread
+                    try:
+                        starter = await msg.channel.parent.fetch_message(msg.channel.id)
+                    except (discord.NotFound, discord.Forbidden):
+                        starter = None
+                if starter and starter.content:
+                    history_lines.insert(
+                        0,
+                        f"[thread-parent] {starter.author.display_name} "
+                        f"({starter.created_at.strftime('%H:%M')}): {starter.content[:400]}",
+                    )
+            except Exception as e:
+                log.debug("Thread starter fetch failed: %s", e)
+        channel_history = "\n".join(history_lines)
     except Exception as e:
         log.warning("Failed to fetch channel history: %s", e)
 
@@ -827,7 +906,7 @@ async def _actually_process_guild_mention(msg: discord.Message):
         channel_kind, msg.author.id, kestrel_user, content[:120], len(channel_history),
     )
 
-    session_key = get_session_key(msg.author.id, msg.channel)
+    session_key = get_session_key(msg.channel)
     _prefs = load_model_prefs()
     _user_model = _prefs.get(str(msg.author.id)) or MODEL_CHAT_DEFAULT
     async with msg.channel.typing():
@@ -854,9 +933,9 @@ async def _actually_process_guild_mention(msg: discord.Message):
 
 
 async def _debounced_process(msg: discord.Message):
-    """Wait DEBOUNCE_SECONDS; if no newer message supersedes us, process."""
+    """Wait PUBLIC_DEBOUNCE_SECONDS; if no newer message supersedes us, process."""
     try:
-        await asyncio.sleep(DEBOUNCE_SECONDS)
+        await asyncio.sleep(PUBLIC_DEBOUNCE_SECONDS)
         # Check we're still the latest
         current = _channel_debounce.get(msg.channel.id)
         if current is None or current[0].id != msg.id:
@@ -864,6 +943,69 @@ async def _debounced_process(msg: discord.Message):
         # We're still the latest — process
         _channel_debounce.pop(msg.channel.id, None)
         await _actually_process_guild_mention(msg)
+    except asyncio.CancelledError:
+        pass  # superseded by newer message
+
+
+async def _actually_process_dm(msg: discord.Message):
+    """Run the SDK call for a DM after the debounce window settled."""
+    content = msg.content.strip()
+    channel_kind = "DM (私聊, 只有你和 Kestrel, 非公开)"
+    kestrel_user = USER_MAP.get(msg.author.id, "vincent")
+
+    # Handle image attachments — download to dump dir, reference path in prompt
+    image_refs = await _collect_image_refs(msg)
+    if not content and not image_refs:
+        return
+    content = _append_image_refs(content, image_refs)
+
+    # React: 👀 acknowledge receipt (before SDK call)
+    try:
+        await msg.add_reaction("👀")
+    except Exception as e:
+        log.debug("add_reaction 👀 failed: %s", e)
+
+    sdk_prompt = build_sdk_prompt(msg, content, kestrel_user, channel_kind)
+    log.info(
+        "Inbound %s from %s (mode=%s) content=%r",
+        channel_kind, msg.author.id, kestrel_user, content[:120],
+    )
+
+    session_key = get_session_key(msg.channel)
+    _prefs = load_model_prefs()
+    _user_model = _prefs.get(str(msg.author.id)) or MODEL_CHAT_DEFAULT
+    async with msg.channel.typing():
+        reply = await call_claude(session_key, kestrel_user, sdk_prompt, model=_user_model)
+
+    CHUNK = 1900
+    for i in range(0, len(reply), CHUNK):
+        await msg.channel.send(reply[i : i + CHUNK])
+
+    # React: swap 👀 → ✅ (reply sent)
+    try:
+        await msg.remove_reaction("👀", client.user)
+    except Exception as e:
+        log.debug("remove_reaction 👀 failed: %s", e)
+    try:
+        await msg.add_reaction("✅")
+    except Exception as e:
+        log.debug("add_reaction ✅ failed: %s", e)
+
+    log.info(
+        "Sent reply (%d chars, mode=%s) via %s",
+        len(reply), kestrel_user, channel_kind,
+    )
+
+
+async def _debounced_process_dm(msg: discord.Message):
+    """Wait DM_DEBOUNCE_SECONDS; if no newer DM supersedes us, process."""
+    try:
+        await asyncio.sleep(DM_DEBOUNCE_SECONDS)
+        current = _channel_debounce.get(msg.channel.id)
+        if current is None or current[0].id != msg.id:
+            return  # superseded
+        _channel_debounce.pop(msg.channel.id, None)
+        await _actually_process_dm(msg)
     except asyncio.CancelledError:
         pass  # superseded by newer message
 
@@ -938,23 +1080,25 @@ async def _passive_engage_flow(msg: discord.Message, channel_role: str = "home")
 
 # ---------------- Unified message handler ----------------
 async def handle_message(msg: discord.Message):
-    if msg.author.bot:
+    # Never respond to ourselves
+    if client.user and msg.author.id == client.user.id:
         return
-    if msg.author.id not in ALLOWED_USER_IDS:
+    # Allow: mapped humans + known peer bots. Skip everyone else (incl. random bots).
+    is_peer_bot = msg.author.id in PEER_BOT_IDS
+    if not is_peer_bot and msg.author.id not in ALLOWED_USER_IDS:
         return
 
-    # ---- DM path: immediate processing (no debounce needed) ----
+    # ---- DM path: debounced processing (batch rapid messages) ----
     if isinstance(msg.channel, discord.DMChannel):
         content = msg.content.strip()
-        channel_kind = "DM (私聊, 只有你和 Kestrel, 非公开)"
         kestrel_user = USER_MAP.get(msg.author.id, "vincent")
 
-        # Special commands
+        # Special commands — immediate, never debounced
         low = content.lower()
 
         if low in {"/new", "/reset"}:
             sessions = load_sessions()
-            session_key_for_reset = get_session_key(msg.author.id, msg.channel)
+            session_key_for_reset = get_session_key(msg.channel)
             removed = sessions.pop(session_key_for_reset, None)
             save_sessions(sessions)
             await msg.channel.send(
@@ -1001,51 +1145,23 @@ async def handle_message(msg: discord.Message):
             )
             return
 
-        # Handle image attachments — download to dump dir, reference path in prompt
-        image_refs = await _collect_image_refs(msg)
-
-        # DM: empty content AND no images means nothing to respond to
-        if not content and not image_refs:
+        # DM: empty content AND no attachments means nothing to respond to
+        has_image_attachment = any(
+            (a.content_type or "").lower().startswith("image/") for a in msg.attachments
+        )
+        if not content and not has_image_attachment:
             return
 
-        # Append image refs to content
-        content = _append_image_refs(content, image_refs)
-
-        # React: 👀 acknowledge receipt (before SDK call)
-        try:
-            await msg.add_reaction("👀")
-        except Exception as e:
-            log.debug("add_reaction 👀 failed: %s", e)
-
-        sdk_prompt = build_sdk_prompt(msg, content, kestrel_user, channel_kind)
+        # Enter DM debounce path — supersede any prior pending DM in this channel.
+        channel_id = msg.channel.id
+        if channel_id in _channel_debounce:
+            _, old_task = _channel_debounce[channel_id]
+            old_task.cancel()
+        task = asyncio.create_task(_debounced_process_dm(msg))
+        _channel_debounce[channel_id] = (msg, task)
         log.info(
-            "Inbound %s from %s (mode=%s) content=%r",
-            channel_kind, msg.author.id, kestrel_user, content[:120],
-        )
-
-        session_key = get_session_key(msg.author.id, msg.channel)
-        _prefs = load_model_prefs()
-        _user_model = _prefs.get(str(msg.author.id)) or MODEL_CHAT_DEFAULT
-        async with msg.channel.typing():
-            reply = await call_claude(session_key, kestrel_user, sdk_prompt, model=_user_model)
-
-        CHUNK = 1900
-        for i in range(0, len(reply), CHUNK):
-            await msg.channel.send(reply[i : i + CHUNK])
-
-        # React: swap 👀 → ✅ (reply sent)
-        try:
-            await msg.remove_reaction("👀", client.user)
-        except Exception as e:
-            log.debug("remove_reaction 👀 failed: %s", e)
-        try:
-            await msg.add_reaction("✅")
-        except Exception as e:
-            log.debug("add_reaction ✅ failed: %s", e)
-
-        log.info(
-            "Sent reply (%d chars, mode=%s) via %s",
-            len(reply), kestrel_user, channel_kind,
+            "DM debounced: channel %s has pending msg %s (queued for %ss)",
+            channel_id, msg.id, DM_DEBOUNCE_SECONDS,
         )
         return
 
@@ -1060,6 +1176,9 @@ async def handle_message(msg: discord.Message):
         # - Home channel (Kestrel's own territory): 50% dice
         # - Friend bot channel (凌喵/艾莉/北辰 home): 10% dice (guest behavior)
         # - Other channels: no passive
+        # Peer bots never trigger passive (avoid bot-chatter loops).
+        if is_peer_bot:
+            return
         if msg.author.id not in ALLOWED_USER_IDS:
             return
         ch_name = msg.channel.name if hasattr(msg.channel, "name") else None
@@ -1091,7 +1210,7 @@ async def handle_message(msg: discord.Message):
     # Special commands — immediate, not debounced
     if low in {"/new", "/reset"}:
         sessions = load_sessions()
-        session_key_for_reset = get_session_key(msg.author.id, msg.channel)
+        session_key_for_reset = get_session_key(msg.channel)
         removed = sessions.pop(session_key_for_reset, None)
         save_sessions(sessions)
         await msg.channel.send(
@@ -1149,7 +1268,7 @@ async def handle_message(msg: discord.Message):
     _channel_debounce[channel_id] = (msg, task)
     log.info(
         "Debounced: channel %s has pending msg %s (queued for %ss)",
-        channel_id, msg.id, DEBOUNCE_SECONDS,
+        channel_id, msg.id, PUBLIC_DEBOUNCE_SECONDS,
     )
     return  # Don't process inline — the debounced task will
 
@@ -1206,10 +1325,10 @@ async def slash_restart(interaction: discord.Interaction):
 async def _do_reset(user_id: int, channel) -> bool:
     """Shared reset logic between text and slash commands."""
     sessions = load_sessions()
-    key = get_session_key(user_id, channel)
+    key = get_session_key(channel)
     removed = sessions.pop(key, None)
     save_sessions(sessions)
-    log.info("Reset session key=%s (removed=%s) via slash", key, bool(removed))
+    log.info("Reset session key=%s (removed=%s by user %s) via slash", key, bool(removed), user_id)
     return bool(removed)
 
 

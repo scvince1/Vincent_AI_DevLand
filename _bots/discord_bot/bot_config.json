@@ -1,0 +1,15 @@
+{
+  "bot_name": "Kestrel",
+  "bot_discord_id": "1496272385215824083",
+  "home_channel": "Kestrel",
+  "system_path": "",
+  "knowledge_root": "",
+  "knowledge_agent_path": "",
+  "peer_notes_dir": "_bots/discord_bot/peer_notes",
+  "channel_history_window": 20,
+  "reaction_palette": {
+    "seen": "🦅",
+    "done": "⚡",
+    "error": "❌"
+  }
+}
