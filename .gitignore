@@ -20,6 +20,18 @@ __pycache__/
 # Env/secrets
 .env
 .env.*
+# Allow .env.example (template, safe to commit)
+!.env.example
+!**/.env.example
 
 # Claude Code local settings (Mac 自配)
 .claude/settings*.json
+
+# Bot secrets and runtime state (Kestrel + any future bots)
+# (.env is already covered globally above; these pin bot-specific runtime files)
+_bots/discord_bot/session_store.json
+_bots/discord_bot/model_prefs.json
+_bots/discord_bot/diary_state.json
+_bots/discord_bot/bot.log
+_bots/discord_bot/__pycache__/
+_bots/discord_bot/00_Dump/
