@@ -3,10 +3,24 @@ id: Boba
 title: Boba
 tags: [pet, person, cat, ragdoll, vincent]
 status: confirmed
-last_modified: 2026-04-15
+last_modified: 2026-04-21
 species: cat
 owner: Vincent
 summary: Vincent 的 Ragdoll 布偶猫，绝育公猫，动物蛋白过敏，Ultamino 处方粮，约7kg
+related:
+  - Pets/_knowledge/ragdoll-breed.md
+  - Pets/_knowledge/cat-general-care.md
+  - Pets/_knowledge/cat-nutrition-weight-activity.md
+  - Pets/_knowledge/aki-and-human-drug-toxicity.md
+  - Pets/_knowledge/cleaners-cat-safety.md
+worldbook_keys: [Boba]
+worldbook_summary: |
+  Boba = Vincent 现役唯一的猫，Ragdoll 布偶猫，绝育公猫，2018-03-17 出生（~8 岁）。
+  健康：慢性尿路 / 肾结石（饮水喷泉缓解）；严重动物蛋白过敏，主食 Royal Canin Ultamino 处方粮；2026-03 心腹超筛查 HCM 阴性，肾功能正常。
+  性格：非啃咬型，对植物零破坏。卧室禁入。
+  家庭：姐姐 Oreo 于 2026-03-05 因 AKI 离世；前辈猫 Wisp（初雨）不在身边。
+  体重管理进行中，目前 ~6.3kg BCS 5/9 理想体型。
+worldbook_order: 150
 ---
 # Boba
 

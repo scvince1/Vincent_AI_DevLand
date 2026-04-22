@@ -3,10 +3,21 @@ id: Oreo
 title: Oreo
 tags: [pet, person, cat, deceased]
 status: confirmed
-last_modified: 2026-04-15
+last_modified: 2026-04-21
 species: cat
 owner: Vincent
 summary: Vincent 已故的绝育母猫，出生日期存争议（2018-07-24 vs 2019-03-04），已故
+related:
+  - Pets/_knowledge/aki-and-human-drug-toxicity.md
+  - Pets/_knowledge/cat-general-care.md
+  - Pets/_knowledge/cat-nutrition-weight-activity.md
+worldbook_keys: [Oreo]
+worldbook_summary: |
+  Oreo = Vincent 已故的绝育母猫（2026-03-05 ~22:00 VEG Miami 安乐死）。
+  死因：急性肾小管坏死 / AKI（2026-03-28 Fishhead Labs 尸检确认）。诱因未明——慢性淋巴浆细胞性胃肠炎 + GI 出血序列本身足够，但布洛芬 / NSAID 诱发同一模式；Vincent 承担内疚。
+  尸检未做毒理学，组织冷冻保留至 ~2026-06-28；之后彻底无法再查。是否补查未决。
+  Vincent 原话："真相的不可得是档案的一部分，不是缺失而是事实本身。"
+worldbook_order: 130
 ---
 # Oreo
 
