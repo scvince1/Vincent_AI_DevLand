@@ -9,7 +9,7 @@ last_modified: 2026-04-15
 # Meta Index
 _Auto-maintained by knowledge-agent. Do not edit manually._
 _Last updated: 2026-04-21_
-_Total entries: 121_
+_Total entries: 122_
 
 | id | type | name | folder | key_info |
 |---|---|---|---|---|
@@ -20,6 +20,7 @@ _Total entries: 121_
 | dietary-framework | system-meta | Vincent 饮食框架 | 85_System |  |
 | improvement-queue | system-meta | 系统改进队列 | 85_System | 凌喵发现的改进机会，等待系统诊断 session 统一审批后写入 |
 | index-pipeline-readme | system-meta | Index Pipeline README | 85_System/index_pipeline | auto-parse KB 脚本, scan_kb.py + diff_indexes.py 产出三张 Index diff 报告 |
+| knowledge-file-spec | system-meta | MeowOS 知识文件 Frontmatter 规范 | 85_System | MeowOS 知识文件的 frontmatter 字段定义、status 枚举、Worldbook 注入字段 |
 | nutrition-index | system-meta | Nutrition Data Index | 85_System |  |
 | anthropic_frontend_design_skill_reference | ai-systems-meta | Anthropic Claude Code frontend-design Skill Reference | 86_AI_Systems | Claude Code frontend-design skill 机制参考文档，含 CSS、dashboard、tooling |
 | consumer_review_data_source_landscape_2025 | ai-systems-meta | Consumer Text Corpus — Data Source Landscape (2025-2026) | 86_AI_Systems | 消费者文本语料来源全景：API/爬虫/法律风险/ML基础设施对比 |
