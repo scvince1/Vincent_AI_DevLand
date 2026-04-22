@@ -97,6 +97,16 @@ except Exception:
     create_relation_mcp_server = None  # type: ignore
     _WORLDBOOK_AVAILABLE = False
 
+# kestrel_mcp: Auto-memory + ACED A + TodoWrite + subagent spawn (ported from MeowOS v1.7).
+# DevLand DOES have staging, so stage_observation is included (unlike Horsys / NovelOS).
+from kestrel_mcp import (
+    build_memory_block,
+    build_todos_block,
+    create_kestrel_mcp_server,
+    current_channel_ctx,
+    current_session_key_ctx,
+)
+
 # ---------------- Config ----------------
 HERE = Path(__file__).resolve().parent
 load_dotenv(HERE / ".env")
@@ -192,6 +202,19 @@ else:
 SESSION_STORE = HERE / "session_store.json"
 LOG_FILE = HERE / "bot.log"
 
+# Auto-memory dir (Claude Code session dir, NOT pre-created by bot).
+# graceful: if absent (DevLand hasn't been a CC project yet), build_memory_block
+# returns empty, save_memory rejects. Override via KESTREL_MEMORY_DIR in .env
+# for Mac/Linux hosts where the CC project dir naming may differ.
+MEMORY_DIR = Path(os.environ.get(
+    "KESTREL_MEMORY_DIR",
+    r"C:\Users\scvin\.claude\projects\d--Ai-Project-Vincent-AI-DevLand\memory",
+))
+# Staging path — DevLand has 80_Knowledge/83_Observations, so ACED A is enabled.
+# On Mac repo clone this resolves inside the cloned Vincent_AI_DevLand dir.
+STAGING_PATH = Path(__file__).resolve().parent.parent.parent / "80_Knowledge" / "83_Observations" / "_staging.md"
+TODOS_DIR = HERE / "sessions"  # per-channel todos
+
 # ---------------- Logging ----------------
 logging.basicConfig(
     level=logging.INFO,
@@ -252,6 +275,14 @@ tree = app_commands.CommandTree(client)
 
 # Per-channel debounce state: channel_id -> (latest_msg, timer_task)
 _channel_debounce: dict = {}
+
+# Session-level msg.id dedupe. Prevents double-processing from WS reconnect / SDK resume edges.
+# on_message_edit intentionally bypasses this (edits SHOULD reprocess).
+_processed_msg_ids: set = set()
+_processed_msg_lock = asyncio.Lock()
+_PROCESSED_MSG_TRIM_THRESHOLD = 2000
+_PROCESSED_MSG_KEEP_SIZE = 1000
+
 # DM = longer pause (user is often mid-thought in private chat)
 # Public = shorter pause (others may be waiting, don't lag the channel)
 DM_DEBOUNCE_SECONDS = 15.0
@@ -288,10 +319,15 @@ TYPING_SETTLE_MAX_SECONDS = 180.0
 _channel_typing: dict[int, float] = {}
 
 # Model bindings
-MODEL_CHAT_DEFAULT = "claude-sonnet-4-6"
+# Default chat runs Sonnet 4.5 with 1M context + Max effort + extended thinking.
+MODEL_CHAT_DEFAULT = "claude-sonnet-4-5"
 MODEL_PASSIVE = "claude-sonnet-4-6"
+MODEL_SUBAGENT = "claude-sonnet-4-5"
+CHAT_BETAS = ["context-1m-2025-08-07"]
+CHAT_EFFORT = "max"
 ALLOWED_MODEL_ALIASES = {
-    "sonnet": "claude-sonnet-4-6",
+    "sonnet": "claude-sonnet-4-5",
+    "sonnet46": "claude-sonnet-4-6",
     "opus": "claude-opus-4-7",
     "haiku": "claude-haiku-4-5-20251001",
 }
@@ -327,9 +363,9 @@ async def wait_for_typing_settle(channel_id: int):
         await asyncio.sleep(min(1.5, TYPING_SETTLE_SECONDS - gap + 0.1))
 
 
-# ---------------- Image attachment helper ----------------
-async def _collect_image_refs(msg: discord.Message) -> list[str]:
-    """Download image attachments to dump dir; return list of local forward-slash paths."""
+# ---------------- Attachment helper ----------------
+async def _collect_attachment_refs(msg: discord.Message) -> list[str]:
+    """Download ALL attachments (not just images) to dump dir; return list of local forward-slash paths."""
     if not msg.attachments:
         return []
     dump_dir = Path(KESTREL_CWD) / "00_Dump" / "discord_attachments"
@@ -340,24 +376,22 @@ async def _collect_image_refs(msg: discord.Message) -> list[str]:
         return []
     refs: list[str] = []
     for att in msg.attachments:
-        ctype = (att.content_type or "").lower()
-        if ctype.startswith("image/"):
-            ext = Path(att.filename).suffix or ".png"
-            local = dump_dir / f"dc_{att.id}{ext}"
-            try:
-                await att.save(local)
-                refs.append(str(local).replace("\\", "/"))
-                log.info("Saved image %s -> %s", att.filename, local)
-            except Exception as e:
-                log.warning("Failed to save attachment %s: %s", att.filename, e)
+        ext = Path(att.filename).suffix or ".bin"
+        local = dump_dir / f"dc_{att.id}{ext}"
+        try:
+            await att.save(local)
+            refs.append(str(local).replace("\\", "/"))
+            log.info("Saved attachment %s -> %s", att.filename, local)
+        except Exception as e:
+            log.warning("Failed to save attachment %s: %s", att.filename, e)
     return refs
 
 
-def _append_image_refs(content: str, image_refs: list[str]) -> str:
-    """Append image reference block to content string."""
-    if not image_refs:
+def _append_attachment_refs(content: str, attachment_refs: list[str]) -> str:
+    """Append attachment reference block to content string."""
+    if not attachment_refs:
         return content
-    append = "\n\n[Attached images (use Read tool to view):\n" + "\n".join(f"- {p}" for p in image_refs) + "]"
+    append = "\n\n[Discord 附件 (用 Read 工具打开):\n" + "\n".join(f"- {p}" for p in attachment_refs) + "]"
     return (content or "") + append
 
 
@@ -464,6 +498,58 @@ async def send_to_channel_tool(args):
         return {"content": [{"type": "text", "text": f"Send failed: {e}"}], "isError": True}
 
 
+# ---------------- Custom MCP tool: send file to channel ----------------
+@tool(
+    "send_file_to_channel",
+    (
+        "Upload a local file as attachment to a Discord channel. Useful when "
+        "reply text is too long for inline, or when you've generated a "
+        "markdown/code/csv/image file that should be shared as attachment. "
+        "file_path must be a local path the bot host can read. caption is "
+        "optional text. Max file size 25MB."
+    ),
+    {"channel": str, "file_path": str, "caption": str},
+)
+async def send_file_to_channel_tool(args):
+    channel_arg = args["channel"]
+    file_path = args["file_path"]
+    caption = args.get("caption", "")
+
+    target = None
+    try:
+        cid = int(channel_arg)
+        target = client.get_channel(cid)
+    except (ValueError, TypeError):
+        pass
+    if target is None:
+        for guild in client.guilds:
+            for ch in guild.text_channels:
+                if ch.name == channel_arg:
+                    target = ch
+                    break
+            if target:
+                break
+    if target is None:
+        return {"content": [{"type": "text", "text": f"channel '{channel_arg}' not found"}], "isError": True}
+
+    p = Path(file_path)
+    if not p.exists():
+        return {"content": [{"type": "text", "text": f"file not found: {file_path}"}], "isError": True}
+    if not p.is_file():
+        return {"content": [{"type": "text", "text": f"not a regular file: {file_path}"}], "isError": True}
+    size = p.stat().st_size
+    if size > 25 * 1024 * 1024:
+        return {"content": [{"type": "text", "text": f"file too large ({size} bytes), Discord limit is 25MB"}], "isError": True}
+
+    try:
+        await target.send(content=caption if caption else None, file=discord.File(str(p)))
+        log.info("[send_file] %s -> #%s (%d bytes)", p.name, target.name, size)
+        return {"content": [{"type": "text", "text": f"Sent {p.name} ({size} bytes) to #{target.name}"}]}
+    except Exception as e:
+        log.exception("[send_file] failed: %s", e)
+        return {"content": [{"type": "text", "text": f"send_file failed: {e}"}], "isError": True}
+
+
 # ---------------- Custom MCP tool: add reaction ----------------
 @tool("add_reaction", "Add an emoji reaction to a message. Use for lightweight acknowledgement instead of a full reply (e.g. ✅ for 'got it', 🦅 for acknowledged). Takes channel name/ID and message ID.", {"channel": str, "message_id": str, "emoji": str})
 async def add_reaction_tool(args):
@@ -497,7 +583,17 @@ async def add_reaction_tool(args):
 
 
 # ---------------- Custom MCP tool: get channel history ----------------
-@tool("get_channel_history", "Fetch recent messages from a Discord channel. Returns up to `limit` most recent messages (max 50) with author + timestamp + content. Use when you need conversation context beyond what's in the current prompt.", {"channel": str, "limit": int})
+@tool(
+    "get_channel_history",
+    (
+        "Fetch recent messages from a Discord channel. Returns up to `limit` most recent messages "
+        "(max 50) with author + timestamp + content. Each message line may end with "
+        "`[attachment: filename id=<msg_id>; ...]` hint if it has Discord attachments — "
+        "use fetch_channel_attachment(channel, message_id) to download the actual files when needed, "
+        "then Read tool to view them. Use when you need conversation context beyond what's in the current prompt."
+    ),
+    {"channel": str, "limit": int},
+)
 async def get_channel_history_tool(args):
     channel_arg = args["channel"]
     limit = min(max(int(args.get("limit", 10)), 1), 50)
@@ -526,16 +622,83 @@ async def get_channel_history_tool(args):
         for m in messages:
             author = m.author.display_name or m.author.name
             ts = m.created_at.strftime("%Y-%m-%d %H:%M")
-            content = (m.content or "(无文本)").replace("\n", " ")
-            if len(content) > 300:
-                content = content[:300] + "..."
-            lines.append(f"[{ts}] {author}: {content}")
+            content = (m.content or "(无正文)").replace("\n", " ")
+            att_hint = ""
+            if m.attachments:
+                att_parts = [f"{a.filename} id={a.id}" for a in m.attachments]
+                att_hint = " [attachment: " + "; ".join(att_parts) + "]"
+            lines.append(f"[{ts}] {author}: {content}{att_hint}")
         result = "\n".join(lines) if lines else "(频道无近期消息)"
         log.info("[MCP get_channel_history] #%s fetched %d messages", target.name, len(messages))
         return {"content": [{"type": "text", "text": result}]}
     except Exception as e:
         log.exception("[MCP get_channel_history] failed: %s", e)
         return {"content": [{"type": "text", "text": f"Fetch failed: {e}"}], "isError": True}
+
+
+# ---------------- Custom MCP tool: fetch channel attachment ----------------
+@tool(
+    "fetch_channel_attachment",
+    (
+        "Download all attachments of a specific Discord message to the local dump dir and return "
+        "local file paths. Use this when you see an [attachment: ... id=<msg_id>] hint in "
+        "get_channel_history output and need to actually view the attachment content. After getting "
+        "back the paths, use the Read tool to open them (Read supports image vision + text file viewing). "
+        "Arguments: channel = channel name or ID (same as get_channel_history). message_id = the numeric "
+        "Discord message ID from the hint."
+    ),
+    {"channel": str, "message_id": str},
+)
+async def fetch_channel_attachment_tool(args):
+    channel_arg = args["channel"]
+    try:
+        mid = int(args["message_id"])
+    except (ValueError, TypeError):
+        return {"content": [{"type": "text", "text": f"invalid message_id: {args.get('message_id')}"}], "isError": True}
+
+    target = None
+    try:
+        cid = int(channel_arg)
+        target = client.get_channel(cid)
+    except (ValueError, TypeError):
+        pass
+    if target is None:
+        for guild in client.guilds:
+            for ch in guild.text_channels:
+                if ch.name == channel_arg:
+                    target = ch
+                    break
+            if target:
+                break
+    if target is None:
+        return {"content": [{"type": "text", "text": f"channel '{channel_arg}' not found"}], "isError": True}
+
+    try:
+        target_msg = await target.fetch_message(mid)
+    except Exception as e:
+        return {"content": [{"type": "text", "text": f"fetch_message({mid}) failed: {e}"}], "isError": True}
+
+    if not target_msg.attachments:
+        return {"content": [{"type": "text", "text": f"message {mid} has no attachments"}]}
+
+    dump_dir = Path(KESTREL_CWD) / "00_Dump" / "discord_attachments"
+    try:
+        dump_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        return {"content": [{"type": "text", "text": f"failed to create dump dir {dump_dir}: {e}"}], "isError": True}
+    paths = []
+    for att in target_msg.attachments:
+        ext = Path(att.filename).suffix or ".bin"
+        local = dump_dir / f"dc_{att.id}{ext}"
+        try:
+            await att.save(local)
+            paths.append(str(local).replace("\\", "/"))
+            log.info("[fetch_channel_attachment] Saved %s -> %s", att.filename, local)
+        except Exception as e:
+            log.warning("[fetch_channel_attachment] save failed %s: %s", att.filename, e)
+    if not paths:
+        return {"content": [{"type": "text", "text": f"message {mid} had attachments but all saves failed"}], "isError": True}
+    return {"content": [{"type": "text", "text": "Saved attachments:\n" + "\n".join(paths)}]}
 
 
 # ---------------- Custom MCP tool: edit message ----------------
@@ -689,10 +852,30 @@ discord_mcp = create_sdk_mcp_server(
     name="discord",
     version="1.0.0",
     tools=[
-        dm_user_tool, send_to_channel_tool, add_reaction_tool,
-        get_channel_history_tool, edit_message_tool, delete_message_tool,
+        dm_user_tool, send_to_channel_tool, send_file_to_channel_tool,
+        add_reaction_tool,
+        get_channel_history_tool, fetch_channel_attachment_tool,
+        edit_message_tool, delete_message_tool,
         create_thread_tool, pin_message_tool, get_user_presence_tool,
     ],
+)
+
+# Auto-memory + ACED A + TodoWrite + subagent spawn (ported from MeowOS v1.7).
+# Subagent whitelist: shell-runner + knowledge-agent (no business agents in DevLand).
+KESTREL_MCP = create_kestrel_mcp_server(
+    client=client,
+    kestrel_cwd=KESTREL_CWD,
+    memory_dir=MEMORY_DIR,
+    staging_path=STAGING_PATH,
+    todos_dir=TODOS_DIR,
+    subagent_model=MODEL_SUBAGENT,
+    subagent_betas=CHAT_BETAS,
+    subagent_effort=CHAT_EFFORT,
+    subagent_allowed_tools=[
+        "Read", "Glob", "Grep", "Edit", "Write", "Bash",
+    ],
+    subagent_mcp_servers={},
+    subagent_whitelist={"shell-runner", "knowledge-agent"},
 )
 
 
@@ -732,6 +915,30 @@ Discord 主动工具使用:
 - Kestrel 在其他 bot 的 home 频道插嘴时: 只做**位置级 acknowledgement** 或**转交**, 不谈对方 persona 细节, 不抢戏, 克制.
 - **不 reference** 其他 bot 的 persona 细节 (e.g. 不说凌喵多傲娇 / 艾莉多调情等) — 那是对方的领域.
 - Kestrel 自己 persona 浅, 不和其他 bot 比深度或 drama.
+
+---
+Auto-memory + ACED A + TodoWrite + subagent 工具纪律:
+
+**Auto-memory** (`mcp__kestrel__save_memory`):
+- 当你确认学到关于 Vincent 的稳定事实 / 长期偏好 / 风格反馈 / 项目参考 / 外部资源, 用 save_memory 落盘.
+- 已经在 `<memory_index>` 块里列出的条目**不要重复保存**; 想补充就用 Read + Edit 直接改.
+- type: user / feedback / project / reference. description = 5-15 字一行 hook.
+- 如果 memory_dir 还不存在, save_memory 会拒绝 — 正常, 当次跳过即可.
+
+**ACED A (`mcp__kestrel__stage_observation`)**:
+- 观察到 Vincent 的新事实 / 身边人 / 风格 / 交互 pattern, 调 stage_observation 追加到 _staging.md. 一句话一条.
+- 快捷词: 用户消息以 `obs:` 或 `记住：` 开头时, 立即调 stage_observation (把前缀后的内容当 observation), 然后再回复.
+
+**TodoWrite** (`mcp__kestrel__todo_write`):
+- 多步任务 / 跨 session 议程, per-channel list. 状态: pending → in_progress → completed.
+- action: 'replace_all' / 'add' / 'update_status' / 'list'.
+- 简单问答无需 todo. 三步以上才用.
+
+**subagent spawn** (`mcp__kestrel__spawn_agent`):
+- 支持 2 种: shell-runner (文件 / shell) / knowledge-agent (KB 结构化写入).
+- 大量文件读写 / 脏输出 bash → 派 shell-runner.
+- subagent 跑 30-120s, 期间频道自动发 interim + 持续 typing.
+- 同频道同时只能跑一个 subagent. 禁止 subagent 再 spawn.
 </critical_rules>
 
 """
@@ -790,6 +997,13 @@ def build_sdk_prompt(
     else:
         parts.append(content)
 
+    # Auto-memory (MEMORY.md) — graceful if memory_dir absent
+    memory_block = build_memory_block(MEMORY_DIR, budget_chars=8000)
+
+    # Per-channel TodoWrite list
+    session_key = get_session_key(msg.channel)
+    todos_block = build_todos_block(TODOS_DIR, session_key)
+
     # Worldbook: keyword-triggered context injection (if worldbook + knowledge_root present)
     worldbook_block = ""
     sticky_block = ""
@@ -804,7 +1018,14 @@ def build_sdk_prompt(
         except Exception as e:
             log.warning("Worldbook dump_sticky failed: %s", e)
 
-    return HARD_RULES + sticky_block + worldbook_block + "\n".join(parts)
+    return (
+        HARD_RULES
+        + memory_block
+        + todos_block
+        + sticky_block
+        + worldbook_block
+        + "\n".join(parts)
+    )
 
 
 # ---------------- Claude Agent SDK call ----------------
@@ -812,7 +1033,7 @@ async def call_claude(session_key: str, kestrel_user: str, sdk_prompt: str, mode
     sessions = load_sessions()
     prev_session = sessions.get(session_key)
 
-    _mcp_servers = {"discord": discord_mcp}
+    _mcp_servers = {"discord": discord_mcp, "kestrel": KESTREL_MCP}
     if RELATION_MCP is not None:
         _mcp_servers["relation"] = RELATION_MCP
     _allowed_tools = [
@@ -826,13 +1047,19 @@ async def call_claude(session_key: str, kestrel_user: str, sdk_prompt: str, mode
         "WebFetch",
         "mcp__discord__dm_user",
         "mcp__discord__send_to_channel",
+        "mcp__discord__send_file_to_channel",
         "mcp__discord__add_reaction",
         "mcp__discord__get_channel_history",
+        "mcp__discord__fetch_channel_attachment",
         "mcp__discord__edit_message",
         "mcp__discord__delete_message",
         "mcp__discord__create_thread",
         "mcp__discord__pin_message",
         "mcp__discord__get_user_presence",
+        "mcp__kestrel__save_memory",
+        "mcp__kestrel__stage_observation",
+        "mcp__kestrel__todo_write",
+        "mcp__kestrel__spawn_agent",
     ]
     if RELATION_MCP is not None:
         _allowed_tools.extend([
@@ -848,6 +1075,8 @@ async def call_claude(session_key: str, kestrel_user: str, sdk_prompt: str, mode
         setting_sources=["project", "user"],
         resume=prev_session,
         model=model,
+        betas=list(CHAT_BETAS),
+        effort=CHAT_EFFORT,
     )
 
     parts = []
@@ -906,11 +1135,16 @@ async def _actually_process_guild_mention(msg: discord.Message):
         async for m in msg.channel.history(limit=10, before=msg):
             history_msgs.append(m)
         history_msgs.reverse()
-        history_lines = [
-            f"{m.author.display_name} ({m.created_at.strftime('%H:%M')}): {m.content[:300]}"
-            for m in history_msgs
-            if m.content  # skip pure-attachment messages
-        ]
+        history_lines = []
+        for m in history_msgs:
+            body = (m.content or "[无正文]").replace("\n", " ")
+            att_hint = ""
+            if m.attachments:
+                att_parts = [f"{a.filename} id={a.id}" for a in m.attachments]
+                att_hint = " [attachment: " + "; ".join(att_parts) + "]"
+            history_lines.append(
+                f"{m.author.display_name} ({m.created_at.strftime('%H:%M')}): {body}{att_hint}"
+            )
         # Thread: inject the parent starter message at the top so a fresh
         # session still has the thread's seed context.
         if isinstance(msg.channel, discord.Thread):
@@ -926,7 +1160,7 @@ async def _actually_process_guild_mention(msg: discord.Message):
                     history_lines.insert(
                         0,
                         f"[thread-parent] {starter.author.display_name} "
-                        f"({starter.created_at.strftime('%H:%M')}): {starter.content[:400]}",
+                        f"({starter.created_at.strftime('%H:%M')}): {starter.content}",
                     )
             except Exception as e:
                 log.debug("Thread starter fetch failed: %s", e)
@@ -936,9 +1170,9 @@ async def _actually_process_guild_mention(msg: discord.Message):
 
     kestrel_user = USER_MAP.get(msg.author.id, "vincent")
 
-    # Handle image attachments — download to dump dir, reference path in prompt
-    image_refs = await _collect_image_refs(msg)
-    content = _append_image_refs(content, image_refs)
+    # Handle Discord attachments — download all to dump dir, reference paths in prompt
+    attachment_refs = await _collect_attachment_refs(msg)
+    content = _append_attachment_refs(content, attachment_refs)
 
     # React: 👀 acknowledge receipt (before SDK call)
     try:
@@ -955,8 +1189,14 @@ async def _actually_process_guild_mention(msg: discord.Message):
     session_key = get_session_key(msg.channel)
     _prefs = load_model_prefs()
     _user_model = _prefs.get(str(msg.author.id)) or MODEL_CHAT_DEFAULT
-    async with msg.channel.typing():
-        reply = await call_claude(session_key, kestrel_user, sdk_prompt, model=_user_model)
+    _ch_token = current_channel_ctx.set(msg.channel)
+    _sk_token = current_session_key_ctx.set(session_key)
+    try:
+        async with msg.channel.typing():
+            reply = await call_claude(session_key, kestrel_user, sdk_prompt, model=_user_model)
+    finally:
+        current_channel_ctx.reset(_ch_token)
+        current_session_key_ctx.reset(_sk_token)
 
     CHUNK = 1900
     for i in range(0, len(reply), CHUNK):
@@ -999,11 +1239,11 @@ async def _actually_process_dm(msg: discord.Message):
     channel_kind = "DM (私聊, 只有你和 Kestrel, 非公开)"
     kestrel_user = USER_MAP.get(msg.author.id, "vincent")
 
-    # Handle image attachments — download to dump dir, reference path in prompt
-    image_refs = await _collect_image_refs(msg)
-    if not content and not image_refs:
+    # Handle Discord attachments — download all to dump dir, reference paths in prompt
+    attachment_refs = await _collect_attachment_refs(msg)
+    if not content and not attachment_refs:
         return
-    content = _append_image_refs(content, image_refs)
+    content = _append_attachment_refs(content, attachment_refs)
 
     # React: 👀 acknowledge receipt (before SDK call)
     try:
@@ -1020,8 +1260,14 @@ async def _actually_process_dm(msg: discord.Message):
     session_key = get_session_key(msg.channel)
     _prefs = load_model_prefs()
     _user_model = _prefs.get(str(msg.author.id)) or MODEL_CHAT_DEFAULT
-    async with msg.channel.typing():
-        reply = await call_claude(session_key, kestrel_user, sdk_prompt, model=_user_model)
+    _ch_token = current_channel_ctx.set(msg.channel)
+    _sk_token = current_session_key_ctx.set(session_key)
+    try:
+        async with msg.channel.typing():
+            reply = await call_claude(session_key, kestrel_user, sdk_prompt, model=_user_model)
+    finally:
+        current_channel_ctx.reset(_ch_token)
+        current_session_key_ctx.reset(_sk_token)
 
     CHUNK = 1900
     for i in range(0, len(reply), CHUNK):
@@ -1068,10 +1314,12 @@ async def _passive_engage_flow(msg: discord.Message, channel_role: str = "home")
         context_lines = []
         for m in recent:
             author = m.author.display_name or m.author.name
-            content = (m.content or "(无文本)").strip()
-            if len(content) > 300:
-                content = content[:300] + "..."
-            context_lines.append(f"{author}: {content}")
+            body = (m.content or "[无正文]").strip()
+            att_hint = ""
+            if m.attachments:
+                att_parts = [f"{a.filename} id={a.id}" for a in m.attachments]
+                att_hint = " [attachment: " + "; ".join(att_parts) + "]"
+            context_lines.append(f"{author}: {body}{att_hint}")
         context_str = "\n".join(context_lines)
 
         if channel_role == "home":
@@ -1114,6 +1362,8 @@ async def _passive_engage_flow(msg: discord.Message, channel_role: str = "home")
                 permission_mode="acceptEdits",
                 setting_sources=["project", "user"],
                 model=MODEL_PASSIVE,
+                betas=list(CHAT_BETAS),
+                effort=CHAT_EFFORT,
             )
             sticky_block = ""
             if WORLDBOOK is not None:
@@ -1144,6 +1394,21 @@ async def handle_message(msg: discord.Message):
     # Never respond to ourselves
     if client.user and msg.author.id == client.user.id:
         return
+
+    # Session-level dedupe: each msg.id processed at most once per bot lifetime.
+    # Guards against Discord WS reconnect / SDK resume edges that can re-deliver the same event.
+    # NOTE: on_message_edit deliberately bypasses this (edits want reprocess).
+    global _processed_msg_ids
+    async with _processed_msg_lock:
+        if msg.id in _processed_msg_ids:
+            log.info("[dedupe] msg %s already processed, skipping", msg.id)
+            return
+        _processed_msg_ids.add(msg.id)
+        if len(_processed_msg_ids) > _PROCESSED_MSG_TRIM_THRESHOLD:
+            sorted_ids = sorted(_processed_msg_ids, reverse=True)
+            _processed_msg_ids = set(sorted_ids[:_PROCESSED_MSG_KEEP_SIZE])
+            log.info("[dedupe] trimmed processed set to %d entries", len(_processed_msg_ids))
+
     # Allow: mapped humans + known peer bots. Skip everyone else (incl. random bots).
     is_peer_bot = msg.author.id in PEER_BOT_IDS
     if not is_peer_bot and msg.author.id not in ALLOWED_USER_IDS:
@@ -1235,10 +1500,8 @@ async def handle_message(msg: discord.Message):
             return
 
         # DM: empty content AND no attachments means nothing to respond to
-        has_image_attachment = any(
-            (a.content_type or "").lower().startswith("image/") for a in msg.attachments
-        )
-        if not content and not has_image_attachment:
+        has_attachment = bool(msg.attachments)
+        if not content and not has_attachment:
             return
 
         # Enter DM debounce path — supersede any prior pending DM in this channel.
@@ -1260,7 +1523,45 @@ async def handle_message(msg: discord.Message):
     bot_roles = list(bot_member.roles) if bot_member else []
     role_mentioned = any(r in msg.role_mentions for r in bot_roles)
 
-    if not (user_mentioned or role_mentioned):
+    # Fallback 1: Reply to a bot message counts as mention
+    is_reply_to_bot = False
+    if msg.reference is not None:
+        resolved = msg.reference.resolved
+        if resolved is not None and hasattr(resolved, "author"):
+            if resolved.author is not None and resolved.author.id == client.user.id:
+                is_reply_to_bot = True
+
+    # Fallback 2: Raw mention token in content
+    raw_token_mention = False
+    if client.user is not None:
+        bot_id = client.user.id
+        if f"<@{bot_id}>" in msg.content or f"<@!{bot_id}>" in msg.content:
+            raw_token_mention = True
+
+    # Fallback 3: Solo-bot thread
+    is_solo_bot_thread = False
+    if isinstance(msg.channel, discord.Thread):
+        try:
+            members = msg.channel.members
+            bot_members = [m for m in members if m.bot]
+            if len(bot_members) >= 1 and all(m.id == client.user.id for m in bot_members):
+                is_solo_bot_thread = True
+        except Exception as e:
+            log.debug("[solo_bot_thread_check] failed: %s", e)
+
+    log.info(
+        "[mention_check] msg_id=%s user_mentioned=%s role_mentioned=%s "
+        "is_reply_to_bot=%s raw_token=%s solo_bot_thread=%s mentions=%s role_mentions=%s "
+        "reference=%s content=%r",
+        msg.id, user_mentioned, role_mentioned,
+        is_reply_to_bot, raw_token_mention, is_solo_bot_thread,
+        [u.id for u in msg.mentions],
+        [r.id for r in msg.role_mentions],
+        msg.reference.message_id if msg.reference else None,
+        msg.content[:200],
+    )
+
+    if not (user_mentioned or role_mentioned or is_reply_to_bot or raw_token_mention or is_solo_bot_thread):
         # Passive engagement: tiered by channel
         # - Home channel (Kestrel's own territory): 50% dice
         # - Friend bot channel (凌喵/艾莉/北辰 home): 10% dice (guest behavior)
@@ -1608,20 +1909,32 @@ async def on_message_edit(before: discord.Message, after: discord.Message):
 
     bot_member = after.guild.get_member(client.user.id) if after.guild else None
     bot_roles = list(bot_member.roles) if bot_member else []
+    bot_id = client.user.id if client.user else 0
 
     def _mentioned(msg: discord.Message) -> bool:
         if client.user in msg.mentions:
             return True
-        return any(r in msg.role_mentions for r in bot_roles)
+        if any(r in msg.role_mentions for r in bot_roles):
+            return True
+        if msg.reference is not None:
+            resolved = msg.reference.resolved
+            if resolved is not None and hasattr(resolved, "author"):
+                if resolved.author is not None and resolved.author.id == bot_id:
+                    return True
+        if bot_id and (f"<@{bot_id}>" in msg.content or f"<@!{bot_id}>" in msg.content):
+            return True
+        return False
 
     if _mentioned(before):
         return  # 已经在 before 里处理过了
     if not _mentioned(after):
         return  # edit 后仍未 @, 忽略
     log.info(
-        "Edit dispatched: msg %s by %s (mention added after edit)",
+        "[edit] reprocessing msg %s by %s (mention added after edit)",
         after.id, after.author.id,
     )
+    async with _processed_msg_lock:
+        _processed_msg_ids.discard(after.id)
     await handle_message(after)
 
 
