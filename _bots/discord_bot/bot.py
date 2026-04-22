@@ -381,8 +381,8 @@ FRIEND_BOT_BASE_NAMES = {"猫爬架", "马厩", "正北"}
 # Commons channels = shared public where all bots chime in at 30% each (independent rolls)
 COMMONS_BASE_NAMES = {"公会大厅"}
 PASSIVE_ENGAGE_P_HOME = 0.50
-PASSIVE_ENGAGE_P_FRIEND = 0.10
-PASSIVE_ENGAGE_P_COMMONS = 0.30
+PASSIVE_ENGAGE_P_FRIEND = 0.07
+PASSIVE_ENGAGE_P_COMMONS = 0.17
 TYPING_SETTLE_SECONDS = 15.0
 TYPING_SETTLE_MAX_SECONDS = 180.0
 _channel_typing: dict[int, float] = {}
@@ -1635,10 +1635,8 @@ async def handle_message(msg: discord.Message):
         # - Home channel (Kestrel's own territory): 50% dice
         # - Friend bot channel (凌喵/艾莉/北辰 home): 10% dice (guest behavior)
         # - Other channels: no passive
-        # Peer bots never trigger passive (avoid bot-chatter loops).
-        if is_peer_bot:
-            return
-        if msg.author.id not in ALLOWED_USER_IDS:
+        # Peer bots can trigger passive (cross-bot chatter allowed, dice rate controls volume).
+        if not is_peer_bot and msg.author.id not in ALLOWED_USER_IDS:
             return
         # Thread inherits parent channel's name for routing purposes, so
         # passive engagement in a thread inside #watch-tower still counts
