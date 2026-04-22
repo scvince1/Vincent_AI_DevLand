@@ -145,6 +145,10 @@ _user_map_raw = os.environ.get("USER_MAP") or os.environ.get("ALLOWED_USER_IDS",
 USER_MAP = _parse_user_map(_user_map_raw)
 ALLOWED_USER_IDS = set(USER_MAP.keys())
 
+# Vincent's Discord ID — derived from USER_MAP; used for privileged ops
+# like !restart-all (fleet-wide graceful exit → launchd auto-respawn).
+VINCENT_DISCORD_ID = next((uid for uid, mode in USER_MAP.items() if mode == "vincent"), None)
+
 # KESTREL_CWD: where the Claude Agent SDK runs from on the host machine.
 # Default is Vincent's Mac home dir; override in .env on whichever host.
 KESTREL_CWD = os.environ.get("KESTREL_CWD", "/Users/scvin")
@@ -1144,6 +1148,21 @@ async def handle_message(msg: discord.Message):
     is_peer_bot = msg.author.id in PEER_BOT_IDS
     if not is_peer_bot and msg.author.id not in ALLOWED_USER_IDS:
         return
+
+    # !restart-all: fleet-wide graceful exit. Only Vincent. Each bot exits;
+    # host supervisor (launchd on Mac, etc.) auto-respawns it. Text command
+    # (not slash) so one message in any channel hits all 4 bots at once.
+    if msg.author.id == VINCENT_DISCORD_ID and msg.content.strip() == "!restart-all":
+        try:
+            await msg.add_reaction("🔄")
+        except Exception:
+            pass
+        log.info("[!restart-all] triggered by Vincent, exiting for auto-respawn...")
+        try:
+            await client.close()
+        except Exception:
+            pass
+        sys.exit(0)
 
     # !new-all: batch reset. Each bot in the channel resets its own session independently.
     if not is_peer_bot and msg.content.strip().lower() == "!new-all":
