@@ -383,8 +383,8 @@ COMMONS_BASE_NAMES = {"公会大厅"}
 PASSIVE_ENGAGE_P_HOME = 0.50
 PASSIVE_ENGAGE_P_FRIEND = 0.07
 PASSIVE_ENGAGE_P_COMMONS = 0.17
-TYPING_SETTLE_SECONDS = 15.0
-TYPING_SETTLE_MAX_SECONDS = 180.0
+TYPING_SETTLE_SECONDS = 10.0
+TYPING_SETTLE_MAX_SECONDS = 60.0
 _channel_typing: dict[int, float] = {}
 
 # Model bindings
@@ -1393,6 +1393,8 @@ async def _passive_engage_flow(msg: discord.Message, channel_role: str = "home")
 
         if channel_role == "home":
             role_note = f"这是你的 home 频道 (#{msg.channel.name}), 你在自己地盘上, 可以稍微自在一点, 但 Kestrel persona 浅, 别硬凑戏."
+        elif channel_role == "commons":
+            role_note = f"这是 #{msg.channel.name}, 公共空间."
         else:
             role_note = (
                 f"这是 #{msg.channel.name} (不是你的 home, 是其他 bot 的领域). "
