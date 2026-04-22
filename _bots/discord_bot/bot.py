@@ -1088,6 +1088,19 @@ async def handle_message(msg: discord.Message):
     if not is_peer_bot and msg.author.id not in ALLOWED_USER_IDS:
         return
 
+    # !new-all: batch reset. Each bot in the channel resets its own session independently.
+    if not is_peer_bot and msg.content.strip().lower() == "!new-all":
+        sessions = load_sessions()
+        key = get_session_key(msg.channel)
+        removed = sessions.pop(key, None)
+        save_sessions(sessions)
+        try:
+            await msg.add_reaction(REACTION_DONE)
+        except Exception:
+            pass
+        log.info("Channel %s session reset via !new-all by user=%s (removed=%s)", msg.channel.id, msg.author.id, bool(removed))
+        return
+
     # ---- DM path: debounced processing (batch rapid messages) ----
     if isinstance(msg.channel, discord.DMChannel):
         content = msg.content.strip()
@@ -1320,6 +1333,22 @@ async def slash_restart(interaction: discord.Interaction):
         "收到, 重启, 马上回来.", ephemeral=True
     )
     asyncio.create_task(_do_restart_flow())
+
+
+@tree.command(name="shutdown", description="Kestrel shutdown (Mac launchd will auto-restart; use `launchctl unload` for permanent)")
+async def slash_shutdown(interaction: discord.Interaction):
+    if interaction.user.id not in ALLOWED_USER_IDS:
+        await interaction.response.send_message("Kestrel 还不认识你.", ephemeral=True)
+        return
+    await interaction.response.send_message(
+        "收到, 下线. 注意 Mac launchd KeepAlive 会自动拉起 — 真要永久关, terminal 跑 `launchctl unload ~/Library/LaunchAgents/com.kestrel.bot.plist`.",
+        ephemeral=True,
+    )
+    log.info("Shutdown requested by user %s", interaction.user.id)
+    async def _exit_soon():
+        await asyncio.sleep(1.0)
+        os._exit(0)
+    asyncio.create_task(_exit_soon())
 
 
 async def _do_reset(user_id: int, channel) -> bool:
