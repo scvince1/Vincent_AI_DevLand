@@ -1,6 +1,6 @@
-# Routing Rules v1.3 — MacBook (Slim)
+# Routing Rules
 _Updated: 2026-04-21_
-_Derived from the MeowOS Routing v1.3 on the primary PC; slimmed to only the targets that exist on this machine. Add rows as new agents are built locally._
+_Slim routing table — only route targets that exist on this machine. Add rows as new agents are built._
 
 ## Intent Classification
 
