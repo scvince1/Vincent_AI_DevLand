@@ -90,10 +90,11 @@ from claude_agent_sdk import (
 # Worldbook import is optional — Vincent_AI_DevLand may not have a knowledge
 # base wired in yet. If worldbook.py isn't shipped, we run without it.
 try:
-    from worldbook import Worldbook
+    from worldbook import Worldbook, create_relation_mcp_server
     _WORLDBOOK_AVAILABLE = True
 except Exception:
     Worldbook = None  # type: ignore
+    create_relation_mcp_server = None  # type: ignore
     _WORLDBOOK_AVAILABLE = False
 
 # ---------------- Config ----------------
@@ -148,18 +149,41 @@ ALLOWED_USER_IDS = set(USER_MAP.keys())
 # Default is Vincent's Mac home dir; override in .env on whichever host.
 KESTREL_CWD = os.environ.get("KESTREL_CWD", "/Users/scvin")
 
-# Worldbook: optional keyword-triggered context injection. Only loads if
-# worldbook.py is importable AND a knowledge root exists at
-# <KESTREL_CWD>/80_Knowledge. Currently Vincent_AI_DevLand has
-# 80_Knowledge but no worldbook-keyed files; this scaffolds for later.
-_knowledge_root = Path(KESTREL_CWD) / "80_Knowledge"
-if _WORLDBOOK_AVAILABLE and _knowledge_root.exists():
+# Bot identity for Worldbook private_to filter + relation MCP routing.
+BOT_OWNER = "kestrel"
+
+# DEVLAND_80K: repo-side 80_Knowledge, resolved from this file's location.
+# Used for the relation layer (peers files live in the repo, not the host
+# home dir) so it works identically on Mac and Windows.
+DEVLAND_80K = Path(__file__).resolve().parent.parent.parent / "80_Knowledge"
+
+# Worldbook: optional keyword-triggered context injection. Knowledge root
+# is resolved repo-relative (DEVLAND_80K) so it works identically on Mac
+# and Windows — Kestrel ships inside Vincent_AI_DevLand and reads the
+# shared 80_Knowledge layer. private_to=kestrel entries stay visible;
+# other bots' private entries are filtered out by owner.
+WORLDBOOK_ROOT = DEVLAND_80K
+if _WORLDBOOK_AVAILABLE and WORLDBOOK_ROOT.exists():
     try:
-        WORLDBOOK = Worldbook(knowledge_root=_knowledge_root)
+        WORLDBOOK = Worldbook(knowledge_root=WORLDBOOK_ROOT, owner=BOT_OWNER)
     except Exception:
         WORLDBOOK = None
 else:
     WORLDBOOK = None
+
+# Relation layer: bot-to-bot relation log MCP server. Independent of
+# WORLDBOOK scan init — relations live in the repo (DEVLAND_80K), not
+# the host knowledge root.
+RELATION_DIR = DEVLAND_80K / "85_System" / "relations"
+if _WORLDBOOK_AVAILABLE and create_relation_mcp_server is not None and RELATION_DIR.exists():
+    try:
+        RELATION_MCP = create_relation_mcp_server(
+            owner=BOT_OWNER, relations_dir=RELATION_DIR
+        )
+    except Exception:
+        RELATION_MCP = None
+else:
+    RELATION_MCP = None
 
 SESSION_STORE = HERE / "session_store.json"
 LOG_FILE = HERE / "bot.log"
@@ -764,14 +788,19 @@ def build_sdk_prompt(
 
     # Worldbook: keyword-triggered context injection (if worldbook + knowledge_root present)
     worldbook_block = ""
+    sticky_block = ""
     if WORLDBOOK is not None:
         try:
             scan_text = (content or "") + "\n" + (channel_history or "")
             worldbook_block = WORLDBOOK.scan(scan_text, budget_tokens=800)
         except Exception as e:
             log.warning("Worldbook scan failed: %s", e)
+        try:
+            sticky_block = WORLDBOOK.dump_sticky(budget_tokens=500)
+        except Exception as e:
+            log.warning("Worldbook dump_sticky failed: %s", e)
 
-    return HARD_RULES + worldbook_block + "\n".join(parts)
+    return HARD_RULES + sticky_block + worldbook_block + "\n".join(parts)
 
 
 # ---------------- Claude Agent SDK call ----------------
@@ -779,29 +808,38 @@ async def call_claude(session_key: str, kestrel_user: str, sdk_prompt: str, mode
     sessions = load_sessions()
     prev_session = sessions.get(session_key)
 
+    _mcp_servers = {"discord": discord_mcp}
+    if RELATION_MCP is not None:
+        _mcp_servers["relation"] = RELATION_MCP
+    _allowed_tools = [
+        "Read",
+        "Glob",
+        "Grep",
+        "Edit",
+        "Write",
+        "Bash",
+        "WebSearch",
+        "WebFetch",
+        "mcp__discord__dm_user",
+        "mcp__discord__send_to_channel",
+        "mcp__discord__add_reaction",
+        "mcp__discord__get_channel_history",
+        "mcp__discord__edit_message",
+        "mcp__discord__delete_message",
+        "mcp__discord__create_thread",
+        "mcp__discord__pin_message",
+        "mcp__discord__get_user_presence",
+    ]
+    if RELATION_MCP is not None:
+        _allowed_tools.extend([
+            "mcp__relation__append_to_relation_log",
+            "mcp__relation__update_relation_snapshot",
+        ])
     options = ClaudeAgentOptions(
         cwd=KESTREL_CWD,
         env={"KESTREL_USER": kestrel_user},
-        allowed_tools=[
-            "Read",
-            "Glob",
-            "Grep",
-            "Edit",
-            "Write",
-            "Bash",
-            "WebSearch",
-            "WebFetch",
-            "mcp__discord__dm_user",
-            "mcp__discord__send_to_channel",
-            "mcp__discord__add_reaction",
-            "mcp__discord__get_channel_history",
-            "mcp__discord__edit_message",
-            "mcp__discord__delete_message",
-            "mcp__discord__create_thread",
-            "mcp__discord__pin_message",
-            "mcp__discord__get_user_presence",
-        ],
-        mcp_servers={"discord": discord_mcp},
+        allowed_tools=_allowed_tools,
+        mcp_servers=_mcp_servers,
         permission_mode="acceptEdits",
         setting_sources=["project", "user"],
         resume=prev_session,
@@ -1056,15 +1094,30 @@ async def _passive_engage_flow(msg: discord.Message, channel_role: str = "home")
 只输出要发的消息正文. 没内容就输出空字符串."""
 
         async with msg.channel.typing():
+            _passive_mcp_servers = {}
+            _passive_allowed = ["Read", "Glob", "Grep"]
+            if RELATION_MCP is not None:
+                _passive_mcp_servers["relation"] = RELATION_MCP
+                _passive_allowed.extend([
+                    "mcp__relation__append_to_relation_log",
+                    "mcp__relation__update_relation_snapshot",
+                ])
             options = ClaudeAgentOptions(
                 cwd=KESTREL_CWD,
                 env={"KESTREL_USER": "vincent"},
-                allowed_tools=["Read", "Glob", "Grep"],
+                allowed_tools=_passive_allowed,
+                mcp_servers=_passive_mcp_servers,
                 permission_mode="acceptEdits",
                 setting_sources=["project", "user"],
                 model=MODEL_PASSIVE,
             )
-            sdk_prompt = HARD_RULES + "\n\n" + passive_prompt
+            sticky_block = ""
+            if WORLDBOOK is not None:
+                try:
+                    sticky_block = WORLDBOOK.dump_sticky(budget_tokens=500)
+                except Exception as e:
+                    log.warning("Worldbook dump_sticky failed: %s", e)
+            sdk_prompt = HARD_RULES + sticky_block + "\n\n" + passive_prompt
             parts = []
             async for msg_obj in query(prompt=sdk_prompt, options=options):
                 if isinstance(msg_obj, AssistantMessage):
