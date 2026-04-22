@@ -1,8 +1,11 @@
 ---
+id: kb-architecture
+title: KB Architecture Design Knowledge
+tags: [kb-design, sparse-index, manifest, retrieval, tacit-knowledge, personal-ai]
+status: active
+last_modified: 2026-04-07
 type: knowledge
 domain: ai-systems
-created: 2026-04-07
-tags: [kb-design, sparse-index, manifest, retrieval, tacit-knowledge, personal-ai]
 ---
 
 # KB Architecture Design Knowledge

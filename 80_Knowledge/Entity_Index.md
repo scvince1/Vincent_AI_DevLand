@@ -8,26 +8,34 @@ last_modified: 2026-04-15
 
 # Entity Index
 _Auto-maintained by knowledge-agent. Do not edit manually._
-_Last updated: 2026-04-15_
-_Total entries: 39_
+_Last updated: 2026-04-21_
+_Total entries: 47_
 
 | id | type | name | folder | key_info |
 |---|---|---|---|---|
 | identity-career | identity | 工作经历 | 81_Identity |  |
 | identity-skills | identity | 技能与优势 | 81_Identity |  |
 | identity-values | identity | 价值观与偏好 | 81_Identity |  |
+| intellectual-motifs | identity | Vincent 思想母题与哲学概念 | 81_Identity | Vincent 反复出现的思想母题、自命名哲学概念、AI 关系框架 authoritative 合并源 |
+| physiological-profile | identity | Vincent 生理档案 | 81_Identity | Vincent 生理档案索引——医学背景 / 健身倾向 / 饮食规律，由 habits.md 迁出专门档 |
+| vincent-legal-status | identity | Vincent 签证与税务历史 | 81_Identity | Vincent 的 F-1 签证历史、税务身份变迁、居住州记录 |
 | article-series | project | Article Series | 82_Projects | writing, article-series, knowledge-transmission |
+| the-alignment-tax | published-article | The Alignment Tax | 82_Projects/articles | LinkedIn 2026-04-09; three-layer alignment failure + Corporate/Initiative/Personal KB architecture |
+| respecting-human-efforts | published-article | Respecting Human Efforts | 82_Projects/articles | LinkedIn 2026-04-09; Karpathy LLM Wiki + Human Sloppiness + Human Efforts; historian's lens on AI knowledge systems |
 | baseos-plan | project | BaseOS — Universal AI OS Template | 82_Projects | Universal AI OS template (KB-first, token frugal, model routing); Joyce is first external user |
 | challenge-5 | project | Challenge 5 — Appliance Brand Predictive Model | 82_Projects | Multi-platform review scraping + sentiment/failure-mode analysis + "what if" predictive input window for home appliance brand |
+| fitness-nutrition | project | Fitness + Nutrition Agent System | 82_Projects | 健康管理 agent 系统 — fitness tracking, nutrition logging, and sodium/potassium monitoring via dedicated AI agents |
 | horsys-tracker | project | Horsys — MeowOS External View | 82_Projects | MeowOS-side tracker for Belmont Equine International; authoritative KB at D:\Ai_Project\Horsys\ |
-| llm-article | project | Llm Article | 82_Projects | writing, llm, knowledge-systems |
+| life-quality | project | Life Quality Improvement Project | 82_Projects | Long-term systematic improvement of Vincent's life quality via sleep / fitness / nutrition / medical baseline / environmental factors |
 | mirofish | project | MiroFish — Swarm Intelligence Prediction Engine Study | 82_Projects | Multi-week study of MiroFish swarm prediction engine; feeds interview narrative + Challenge 5 + novel/academic work |
 | novelos-tracker | project | NovelOS — MeowOS External View | 82_Projects | MeowOS-side tracker for NovelOS (novel writing system); authoritative KB at D:\Ai_Project\NovelOS\ |
-| project-belmont | project | Belmont 马术项目 | 82_Projects |  |
 | project-job-search | project | Job Search | 82_Projects |  |
-| project-trade | project | 编子贸易 | 82_Projects |  |
+| sharkninja-status | project | SharkNinja 面试进展 | 82_Projects | Navigate SharkNinja interview rounds to offer; Consumer Intelligence in Marketing role; Joyce 为 R2 interviewer |
+| socratic-skill | project | Socratic Skill System | 82_Projects | Socratic Q&A learning skill + domain KB builder skill — structured deep learning with KB persistence, avoiding training-memory hallucination |
+| joyce | person | Joyce / Joyce Ling | 87_People | SharkNinja 幕僚长（Mark Barrocas 的 CoS）；Vincent 伴侣；凌喵的喵喵大人；triad 顶位 |
 | tate | person | Tate | 87_People | 心理/神经科学+人类学背景，从事 mental health 方向中学教师+研究，AI 使用哲学克制保守 |
 | Boba | pet | Boba | 87_People/Pets/Boba | Vincent 的 Ragdoll 布偶猫，绝育公猫，动物蛋白过敏，Ultamino 处方粮，约7kg |
+| Lingxi | pet | 灵熙 (Lingxi) | 87_People/Pets/Lingxi | Vincent 订购中的 Abyssinian 阿比西尼亚猫，Rudy 色小母猫，2026-03-15 出生，Montreal AbaiMtl Cattery，deposit 计划 2026-04-21~04-25 |
 | Oreo | pet | Oreo | 87_People/Pets/Oreo | Vincent 已故的绝育母猫，出生日期存争议（2018-07-24 vs 2019-03-04），已故 |
 | Wisp | pet | Wisp（初雨） | 87_People/Pets/Wisp | 豹纹小狸花，2020-10-31 出生，约5.5岁，早于 Boba+Oreo 在 Vincent 身边 |
 | aki-and-human-drug-toxicity | pet | 猫急性肾损伤（AKI）与常见人用药物毒性知识库 | 87_People/Pets/_knowledge | 猫 AKI 病理生理及常见人用药物（NSAIDs、对乙酰氨基酚等）对猫的毒性机制 |

@@ -1,3 +1,16 @@
+---
+id: ccs-roles-01-org-map
+title: "Corporate Org Map: Consumer-Signal-Relevant Roles"
+tags: [synthesis, research, sharkninja, consumer_insights, job_research, org_chart, c_suite]
+status: active
+last_modified: 2026-04-21
+concept: corporate_consumer_signal_roles
+type: synthesis
+generated_by: subagent-research
+scope: SharkNinja-scale (~$5B, ~3000 员工) C-suite + 消费者信号相关角色组织架构、ladder、汇报关系
+source_date: 2026-04-17
+---
+
 # Corporate Org Map: Consumer-Signal-Relevant Roles
 **Scope:** SharkNinja-scale consumer products (~$5B revenue, ~3,000 employees)
 **Date:** 2026-04-17

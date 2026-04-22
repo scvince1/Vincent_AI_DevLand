@@ -1,3 +1,16 @@
+---
+id: ccs-roles-05-sharkninja-people
+title: "SharkNinja Digital Shelf / E-Commerce People Brief"
+tags: [synthesis, research, sharkninja, consumer_insights, job_research, people_brief, linkedin]
+status: active
+last_modified: 2026-04-21
+concept: corporate_consumer_signal_roles
+type: synthesis
+generated_by: subagent-research
+scope: 9 位 SharkNinja 数字架 / E-Commerce 相关 named individuals 档案（LinkedIn / trade press / The Org / ZoomInfo 来源）
+source_date: 2026-04-17
+---
+
 # SharkNinja Digital Shelf / E-Commerce People Brief
 
 **Research date:** 2026-04-17

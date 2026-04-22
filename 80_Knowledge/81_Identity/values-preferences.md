@@ -1,9 +1,9 @@
 ---
 id: identity-values
-cluster: identity
 title: 价值观与偏好
-keywords: []
-updated: ""
+tags: [identity, values, preferences]
+status: active
+last_modified: 2026-04-21
 ---
 
 ## 工作偏好

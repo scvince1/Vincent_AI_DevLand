@@ -7,9 +7,9 @@ source_title: 'Making time management the organization''s priority (McKinsey); T
 source_date: 2013 (McKinsey), 2014 (Bain), 2023 (Asana)
 logged: 2026-04-08
 tags: [executive time, meetings, alignment cost, organizational efficiency, quantitative data]
-related: [HBR Alignment Tax article, alignment tax framework]
+related: [82_Projects/articles/the-alignment-tax.md]
 status: confirmed
-last_modified: 2026-04-15
+last_modified: 2026-04-21
 ---
 
 ## McKinsey (2013)

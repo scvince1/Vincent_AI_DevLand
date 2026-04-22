@@ -7,9 +7,9 @@ source_title: "More Work for Mother: The Ironies of Household Technology from th
 source_date: 1983
 logged: 2026-04-08
 tags: [technology history, domestic labor, labor paradox, household technology, unintended consequences, standards inflation]
-related: [technology history examples, historian's lens for AI articles]
+related: [82_Projects/article-series.md]
 status: confirmed
-last_modified: 2026-04-15
+last_modified: 2026-04-21
 ---
 
 The household refrigerator (1920s-30s) was marketed as a labor-saving device. It actually transformed the nature of domestic procurement labor.

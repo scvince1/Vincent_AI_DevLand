@@ -1,3 +1,16 @@
+---
+id: ccs-roles-03-gap-analysis
+title: "Consumer Signal Gap Analysis: Who Has the Hunch But No Tool"
+tags: [synthesis, research, sharkninja, consumer_insights, job_research, gap_analysis, target_user]
+status: active
+last_modified: 2026-04-21
+concept: corporate_consumer_signal_roles
+type: synthesis
+generated_by: subagent-research
+scope: 定位"我有预感但无工具"时刻所在的角色；Top 5 ranking；E-Commerce / Digital Shelf Manager 列首
+source_date: 2026-04-17
+---
+
 # Consumer Signal Gap Analysis: Who Has the Hunch But No Tool
 
 **Research question:** Map where the "I feel something's off but have no tool" moment happens most in consumer products companies at SharkNinja scale.

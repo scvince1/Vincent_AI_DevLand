@@ -1,6 +1,11 @@
 ---
-concept: word2vec
+id: word2vec-meta
+title: word2vec — Concept Meta
+tags: [meta, research, word2vec, ml-ai, nlp, embeddings]
 status: seeded
+last_modified: 2026-04-21
+concept: word2vec
+type: meta
 created: 2026-04-16
 last_updated: 2026-04-16
 freshness_tier: slow

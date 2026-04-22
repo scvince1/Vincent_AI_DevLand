@@ -1,3 +1,16 @@
+---
+id: ccs-roles-02-day-in-life
+title: "Week-in-the-Life: Consumer Signal Roles at SharkNinja Scale"
+tags: [synthesis, research, sharkninja, consumer_insights, job_research, day_in_life, workflow]
+status: active
+last_modified: 2026-04-21
+concept: corporate_consumer_signal_roles
+type: synthesis
+generated_by: subagent-research
+scope: 8 个 consumer-signal 相关角色的 Mon-Fri 节奏、工具栈（Salesforce Agentforce / Qualtrics / Analytic Partners）与日常锚点
+source_date: 2026-04-17
+---
+
 # Week-in-the-Life: Consumer Signal Roles at SharkNinja Scale
 
 > Context: ~5B USD revenue consumer appliances/home/beauty company (SharkNinja-scale). Stack: Salesforce Agentforce (CS), Qualtrics (surveys), Analytic Partners (MMM). SharkNinja places near-final products in ~750 homes and generates an average of 200 product changes before release. Glassdoor: 2.7/5 overall, 2.1/5 WLB, very fast-paced, constantly changing.

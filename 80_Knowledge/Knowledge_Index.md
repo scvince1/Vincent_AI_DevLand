@@ -8,12 +8,13 @@ last_modified: 2026-04-15
 
 # Knowledge Index
 _Auto-maintained by knowledge-agent. Do not edit manually._
-_Last updated: 2026-04-15_
-_Total entries: 211_
+_Last updated: 2026-04-21_
+_Total entries: 225_
 
 | id | type | name | folder | key_info |
 |---|---|---|---|---|
 | sleep-science | health | Sleep Science | 82_Health |  |
+| vincent-medical-background | health | Vincent 医学背景记录 | 82_Health | Vincent 过敏、睡眠呼吸、药物使用与医学设备订购记录 |
 | 01_repo_deepread | ai-tech | autoresearch Deep Read Notes | 84_AI_Tech/autoresearch_2026-04-11 | Karpathy autoresearch repo 深度解读，AI-agent-driven ML research 最小脚手架 |
 | 02_author_context | ai-tech | Karpathy autoresearch — Author Context and Motivation | 84_AI_Tech/autoresearch_2026-04-11 | Karpathy 创建 autoresearch 的动机、推文、播客及媒体报道综合 |
 | 03_landscape | ai-tech | Landscape — Autonomous Research Agents State of the Art | 84_AI_Tech/autoresearch_2026-04-11 | 自主研究 Agent 领域全景对比，聚焦知识持久性 |
@@ -41,6 +42,7 @@ _Total entries: 211_
 | targets | fitness | 营养目标 (Recomp) | 84_Fitness/nutrition | 按日类型分化的宏量素目标：攀岩日/力量日/有氧日/休息日分配 |
 | _template | fitness | 餐食记录模板 | 84_Fitness/nutrition/meal-prep | 菜肴营养记录标准模板，含食材宏量素热量及数据来源字段 |
 | fire-noodle-3egg-romaine | fitness | 火鸡面 + 3 Eggs + Romaine Lettuce | 84_Fitness/nutrition/meal-prep | Vincent 自制火鸡面+3蛋+生菜的完整营养数据卡片 |
+| meal-prep-cook-2026-04-17 | fitness | 2026-04-17 做饭+消费记录 | 84_Fitness/nutrition/meal-prep | Vincent 2026-04-17 做饭 + 午餐消费的营养流水记录，含冰箱待后消费剩料跟踪 |
 | protein-shake-quest-45g | fitness | Quest 45g Protein Milkshake (RTD) | 84_Fitness/nutrition/meal-prep | Quest 45g 蛋白质奶昔 RTD 营养数据快速参考卡片 |
 | you-po-la-zi | fitness | 油泼辣子 / You Po La Zi | 84_Fitness/nutrition/meal-prep | 自制油泼辣子低钠版本营养数据与钠含量估算 |
 | intensity-phase | fitness | Session Menu — Intensity Phase | 84_Fitness/session-menu | Layer 2 Mesocycle 后期强度阶段，按场地分类训练菜单 |
@@ -49,6 +51,7 @@ _Total entries: 211_
 | github_ecosystem_2026-04 | system-knowledge | Harness Engineering Ecosystem — GitHub Research Report | 85_System/harness_engineering | Agent/harness engineering 领域主要 GitHub 项目 star 数与活跃度核查 |
 | people_radar_2026-04 | system-knowledge | People Radar — Harness Engineering Field | 85_System/harness_engineering | 15位 harness engineering 领域关键人物追踪（10验证+5新增） |
 | 00_consolidated_candidates | system-knowledge | 系统改进候选合并报告 | 85_System/harness_engineering/audit | 三层审计合并候选清单，待 Vincent 审批后写入 improvement-queue |
+| pending_candidates | system-knowledge | Pending Candidates — 系统诊断 Phase 1 | 85_System/harness_engineering/audit | system-diagnostics Phase 1 产出的候选清单，逐条待 Vincent 审批后由 Phase 2 执行 |
 | audit_B1_information | system-knowledge | B1 信息层审计报告 | 85_System/harness_engineering/audit | MeowOS 信息层（Intent+Memory+Context）审计报告 |
 | audit_B2_execution | system-knowledge | Audit-B2 — 执行层审计报告 | 85_System/harness_engineering/audit | MeowOS 执行层（Planning+Control Flow+Tools）审计报告 |
 | audit_B3_quality | system-knowledge | Audit B3 — Quality Layer 质量层审计 | 85_System/harness_engineering/audit | MeowOS 质量层审计：评估、可观测性、约束与恢复机制 |
@@ -218,6 +221,17 @@ _Total entries: 211_
 | unconventional-equipment-hypertrophy-evidence | learned | Evidence for hypertrophy with sandbags, clubbells, light dumbbells, and bodyweight | 88_Learned | sandbag, clubbell, bodyweight |
 | us-chinese-restaurant-sodium-heuristic | learned | Us Chinese Restaurant Sodium Heuristic | 88_Learned |  |
 | yates-control-through-communication | learned | Control Through Communication | 88_Learned | technology history, organizational memory, filing systems |
+| ccs-roles-00-synthesis | research | 00 Synthesis — Corporate Literacy + Challenge 5 Target User Recommendation | 88_Research/corporate_consumer_signal_roles | 5 分报告综合+Challenge 5 目标用户推荐，经济买方 Commerce Media 负责人 |
+| ccs-roles-01-org-map | research | Corporate Org Map — Consumer-Signal-Relevant Roles | 88_Research/corporate_consumer_signal_roles | SharkNinja-scale C-suite + consumer signal 相关角色组织架构与汇报关系 |
+| ccs-roles-02-day-in-life | research | Week-in-the-Life — Consumer Signal Roles at SharkNinja Scale | 88_Research/corporate_consumer_signal_roles | 8 个 consumer-signal 角色 Mon-Fri 锚点，工具栈 Salesforce Agentforce/Qualtrics |
+| ccs-roles-03-gap-analysis | research | Consumer Signal Gap Analysis — Who Has the Hunch But No Tool | 88_Research/corporate_consumer_signal_roles | Top 5 "有预感无工具"角色 ranking，E-Commerce/Digital Shelf Manager 列首 |
+| ccs-roles-04-sharkninja-titles | research | SharkNinja Digital Shelf / E-Commerce / Amazon Channel Title Taxonomy | 88_Research/corporate_consumer_signal_roles | SharkNinja 36 条确认职称 taxonomy，Amazon/pure players/其他渠道分类 |
+| ccs-roles-05-sharkninja-people | research | SharkNinja Digital Shelf / E-Commerce People Brief | 88_Research/corporate_consumer_signal_roles | 9 位 SharkNinja 数字架 / E-Commerce named individuals 档案 |
+| memory-layers-comparison-zep | research | Zep / Mem0 / A-MEM — Agent Memory Layer Comparison | 88_Research/memory_layers | Zep/Mem0/A-MEM 3 种 agent memory 架构对比 + Graphiti MCP 集成建议 |
+| skill-opt-darwin-skill | research | Darwin-Skill 深度调研 | 88_Research/skill_optimization | darwin-skill 项目 8 维 rubric + hill-climbing + 评分独立性设计 |
+| skill-opt-landscape | research | Skill Optimization & Agent Self-Improvement — Landscape Scan | 88_Research/skill_optimization | Voyager/JARVIS-1/PromptBreeder/ADAS/DSPy 等全景扫描 + SoK taxonomy |
+| vibe-kanban-architecture | research | Vibe Kanban 架构逆向分析 | 88_Research/vibe_kanban | BloopAI/vibe-kanban 逆向：spawn / worktree 隔离 / stdin-stdout JSON 协议 |
+| word2vec-meta | research | word2vec — Concept Meta | 88_Research/word2vec | word2vec concept 元数据（freshness_tier: slow, 9 sources pending scrape）|
 | b2b_consumer_insights_pitch_deck_structure | business | B2B Consumer Insights Pitch Deck — Structural Skeleton | 89_Business | B2B 消费者洞察 SaaS 产品 pitch deck 结构框架与叙事逻辑 |
 | cgo_consumer_intelligence_consumption_patterns | business | CGO-Level Exec Consumer Intelligence Consumption Patterns | 89_Business | CGO/CMO 级别高管消费者智能信息消费模式，B2B 产品 pitch 策略参考 |
 | competitive_positioning_adjacent_not_competing_framing | business | Competitive Positioning — Adjacent Not Competing Framing | 89_Business | 竞争定位策略：毗邻而非竞争的叙事框架，规避竞品直接对比 |

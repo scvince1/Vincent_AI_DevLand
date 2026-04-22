@@ -7,9 +7,9 @@ source_title: Five HBR articles surveyed in a separate Claude session
 source_date: 2025-2026
 logged: 2026-04-08
 tags: [HBR, competitive landscape, AI discourse, enterprise AI, publication strategy]
-related: [HBR Alignment Tax article, article series planning]
+related: [82_Projects/articles/the-alignment-tax.md, 82_Projects/article-series.md]
 status: confirmed
-last_modified: 2026-04-15
+last_modified: 2026-04-21
 ---
 
 ## Key HBR articles in the space (as of early 2026)

@@ -1,8 +1,11 @@
 ---
+id: org-cognitive-infrastructure
+title: 组织认知基础设施 (Organizational Cognitive Infrastructure)
+tags: [ai-deployment, organizational, cognitive-infrastructure, multi-agent, enterprise]
+status: active
+last_modified: 2026-04-07
 type: knowledge
 domain: ai-strategy
-created: 2026-04-07
-tags: [ai-deployment, organizational, cognitive-infrastructure, multi-agent, enterprise]
 ---
 
 # 组织认知基础设施 (Organizational Cognitive Infrastructure)

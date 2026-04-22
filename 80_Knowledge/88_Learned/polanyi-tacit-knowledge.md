@@ -7,9 +7,9 @@ source_title: "The Tacit Dimension"
 source_date: 1966
 logged: 2026-04-08
 tags: [epistemology, knowledge theory, articulation gap, human cognition, philosophy of knowledge]
-related: [Human Sloppiness concept, HBR Alignment Tax article, LinkedIn Article 1]
+related: [82_Projects/articles/the-alignment-tax.md, 82_Projects/articles/respecting-human-efforts.md]
 status: confirmed
-last_modified: 2026-04-15
+last_modified: 2026-04-21
 ---
 
 Polanyi's core claim: "We know more than we can tell."

@@ -1,9 +1,9 @@
 ---
 id: identity-career
-cluster: identity
 title: 工作经历
-keywords: []
-updated: ""
+tags: [identity, career, history]
+status: active
+last_modified: 2026-04-21
 ---
 
 ## [公司名] — [职位]

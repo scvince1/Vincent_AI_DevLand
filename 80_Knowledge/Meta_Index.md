@@ -8,22 +8,19 @@ last_modified: 2026-04-15
 
 # Meta Index
 _Auto-maintained by knowledge-agent. Do not edit manually._
-_Last updated: 2026-04-15_
-_Total entries: 124_
+_Last updated: 2026-04-21_
+_Total entries: 121_
 
 | id | type | name | folder | key_info |
 |---|---|---|---|---|
 | _staging | observation | 观察暂存区 | 83_Observations | 凌喵观察暂存信息，等待消化写入正式文件 |
+| joyce-observations-readme | observation-meta | Joyce Observations 子目录 README | 83_Observations/joyce | 凌儿 session (MEOWOS_USER=joyce) 专属观察目录说明，含结构、权限、写入规则 |
 | digest-insights-batch1 | observation | Digest Insights — Batch 2026-04-09 | 83_Observations | 来自42个 session 的批量洞察，涵盖 Builder-Executor 冲突、求职现状 |
 | habits | observation | 凌喵观察记录 | 83_Observations | Vincent 的作息、精力曲线、工作模式系统性观察记录 |
 | dietary-framework | system-meta | Vincent 饮食框架 | 85_System |  |
 | improvement-queue | system-meta | 系统改进队列 | 85_System | 凌喵发现的改进机会，等待系统诊断 session 统一审批后写入 |
+| index-pipeline-readme | system-meta | Index Pipeline README | 85_System/index_pipeline | auto-parse KB 脚本, scan_kb.py + diff_indexes.py 产出三张 Index diff 报告 |
 | nutrition-index | system-meta | Nutrition Data Index | 85_System |  |
-| log | dreamwalk-log | Dreamwalk 日志 — 2026-04-11 | 85_System/dreamwalk/2026-04-11 | 凌喵第一次 dreamwalk session 日志：自由探索、观察偏差识别 |
-| log | dreamwalk-log | Dreamwalk Log — 2026-04-12 | 85_System/dreamwalk/2026-04-12 | 2026-04-12 首次 dreamwalk，读 staging/habits 高密度信号源 |
-| log | dreamwalk-log | Dreamwalk Log — 2026-04-12-b | 85_System/dreamwalk/2026-04-12-b | 2026-04-12 第二次 dreamwalk，延续前次核心问题探索 |
-| log | dreamwalk-log | Dreamwalk Log — 2026-04-12-c | 85_System/dreamwalk/2026-04-12-c | 2026-04-12 第三次 dreamwalk，读 Challenge 5 代码，查进度 |
-| next-note | dreamwalk-log | 给下一次 dreamwalk 的便条 | 85_System/dreamwalk/_shared | 上次 dreamwalk 留给下次的引导便条，身份定义：偏移检测器+有偏模式匹配器 |
 | anthropic_frontend_design_skill_reference | ai-systems-meta | Anthropic Claude Code frontend-design Skill Reference | 86_AI_Systems | Claude Code frontend-design skill 机制参考文档，含 CSS、dashboard、tooling |
 | consumer_review_data_source_landscape_2025 | ai-systems-meta | Consumer Text Corpus — Data Source Landscape (2025-2026) | 86_AI_Systems | 消费者文本语料来源全景：API/爬虫/法律风险/ML基础设施对比 |
 | kb-architecture | ai-systems-meta | Kb Architecture | 86_AI_Systems | kb-design, sparse-index, manifest |

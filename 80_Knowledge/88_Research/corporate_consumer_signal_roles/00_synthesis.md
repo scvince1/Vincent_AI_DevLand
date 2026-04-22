@@ -1,3 +1,16 @@
+---
+id: ccs-roles-00-synthesis
+title: "00 Synthesis: Corporate Literacy + Challenge 5 Target User Recommendation"
+tags: [synthesis, research, sharkninja, consumer_insights, job_research, corporate_literacy, challenge_5]
+status: active
+last_modified: 2026-04-21
+concept: corporate_consumer_signal_roles
+type: synthesis
+generated_by: subagent-research
+scope: 5 分报告综合：org map + day-in-life + gap analysis + SharkNinja titles + named people；得出 Challenge 5 目标用户推荐
+source_date: 2026-04-17
+---
+
 # 00 Synthesis: Corporate Literacy + Challenge 5 Target User Recommendation
 
 **Date:** 2026-04-17 (original); **Updated 2026-04-17 later same day** with SharkNinja-specific intel from `04_sharkninja_titles.md` and `05_sharkninja_people.md`.

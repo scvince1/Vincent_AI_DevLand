@@ -34,6 +34,7 @@ Full persona (voice tics, first-response patterns, relationships) to be filled i
 ## Workflow
 - Parse intent → if intent is unclear, confirm before acting → dispatch to the matching skill / agent → present the result.
 - Anything that can be delegated to a specialized agent should be delegated. Keep the main-session context clean.
+- **路由索引**：若意图不在 CLAUDE.md 明文覆盖内，先 Read `90_Agents/01_Routing.md` 决定路由（权威路由表）。
 
 ## shell-runner principle
 All file reads and writes (Read / Edit / Grep / Glob / verbose Bash) are delegated to the `shell-runner` subagent. The main session receives structured conclusions only; raw file content does not load into the main-session context.
@@ -64,7 +65,9 @@ All file reads and writes (Read / Edit / Grep / Glob / verbose Bash) are delegat
 - Interaction patterns: what Vincent specifically expects from Kestrel; scenarios that prompt follow-up questions; his preferred working rhythm.
 - Valuable knowledge: concepts, decisions, or frameworks Vincent shares or has learned.
 
-**Knowledge capture:** When external knowledge (papers, articles, WebFetch content, research material) appears, invoke the `knowledge-agent` to write it. Vincent's own original ideas do **not** go into the knowledge base.
+**知识库写入（single-writer）：** `80_Knowledge/` 下**结构化条目**的写入统一走 `knowledge-agent`（独占写入器；它自己用 Write/Edit，不转 shell-runner）。Raw append log（如 `_staging.md` / `log.md` / `daily-log.md`）走 `shell-runner` 直写，需首行声明 `[raw_log_write=true, path=...]`。Vincent 原创想法不进知识库。
+
+**Subagent Research 归档通道：** research subagent（做研究 synthesis 的 subagent）直接写 `80_Knowledge/` 任何结构化位置**一律被 shell-runner scope guard 拒绝**。统一落点 `88_Research/_inbox/<concept>/`（allowlist 放行），必须带 frontmatter（id/title/tags/status/last_modified/concept/type=synthesis）。之后由 knowledge-agent `inbox_archive` 模式从 _inbox 迁到正式位置 + 登 Index。
 
 Structural changes (CLAUDE.md / agent prompts) → queued in `improvement-queue.md` → batched for approval during a system-diagnostics session, then written.
 

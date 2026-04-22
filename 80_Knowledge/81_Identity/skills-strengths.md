@@ -1,9 +1,9 @@
 ---
 id: identity-skills
-cluster: identity
 title: 技能与优势
-keywords: []
-updated: ""
+tags: [identity, skills, strengths]
+status: active
+last_modified: 2026-04-21
 ---
 
 ## 专业技能

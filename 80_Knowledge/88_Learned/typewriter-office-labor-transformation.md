@@ -7,9 +7,9 @@ source_title: "Woman's Place Is at the Typewriter (Davies, 1982); Beyond the Typ
 source_date: 1982, 1992
 logged: 2026-04-08
 tags: [technology history, office labor, gender history, occupational restructuring, unintended consequences]
-related: [technology history examples, historian's lens for AI articles]
+related: [82_Projects/article-series.md]
 status: confirmed
-last_modified: 2026-04-15
+last_modified: 2026-04-21
 ---
 
 Remington sold the typewriter (1870s) as a tool for writers and telegraph operators to write faster. It accidentally created a new occupational category (typist-stenographer) and restructured office labor.

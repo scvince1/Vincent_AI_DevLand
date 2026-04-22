@@ -37,6 +37,6 @@ source_title: [book, article, or report title]
 source_date: [original publication year]
 logged: [date Vincent learned or recorded this]
 tags: [fine-grained topic tags for retrieval]
-related: [which of Vincent's articles/projects this feeds into]
+related: [path/to/article-or-project.md]
 ---
 ```

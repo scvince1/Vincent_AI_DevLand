@@ -3,9 +3,11 @@ id: tate
 title: Tate
 tags: [person, relationship, intellectual-peer]
 status: confirmed
-last_modified: 2026-04-17
+last_modified: 2026-04-21
 relationship: 可以进行深度智识对话的朋友，Joyce 的 direct report
 summary: 心理/神经科学+人类学背景，从事 mental health 方向中学教师+研究，AI 使用哲学克制保守
+related:
+  - Vincent/experiences/joyce_tate_baseos_demo.md
 ---
 # Tate
 

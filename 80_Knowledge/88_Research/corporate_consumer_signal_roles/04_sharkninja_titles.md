@@ -1,3 +1,16 @@
+---
+id: ccs-roles-04-sharkninja-titles
+title: "SharkNinja Digital Shelf / E-Commerce / Amazon Channel Title Taxonomy"
+tags: [synthesis, research, sharkninja, consumer_insights, job_research, titles, taxonomy]
+status: active
+last_modified: 2026-04-21
+concept: corporate_consumer_signal_roles
+type: synthesis
+generated_by: subagent-research
+scope: SharkNinja 36 条确认职称 taxonomy，按 Amazon / pure players / 其他渠道分类；所有条目均附 careers.sharkninja.com 来源链接
+source_date: 2026-04-17
+---
+
 # SharkNinja Digital Shelf / E-Commerce / Amazon Channel Title Taxonomy
 
 **Research date:** 2026-04-17. All titles confirmed from live job postings or LinkedIn profiles unless flagged otherwise.

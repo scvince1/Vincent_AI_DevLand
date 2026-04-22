@@ -7,9 +7,9 @@ source_title: "Control through Communication: The Rise of System in American Man
 source_date: 1989
 logged: 2026-04-08
 tags: [technology history, organizational memory, filing systems, knowledge infrastructure, bureaucracy]
-related: [HBR Alignment Tax article, organizational cognitive infrastructure]
+related: [82_Projects/articles/the-alignment-tax.md, 86_AI_Systems/org-cognitive-infrastructure.md]
 status: confirmed
-last_modified: 2026-04-15
+last_modified: 2026-04-21
 ---
 
 The vertical filing cabinet (promoted by Library Bureau from 1890s) was sold as a space-saving device. Its actual effect was transferring institutional memory from senior clerks' heads into a queryable physical system.
