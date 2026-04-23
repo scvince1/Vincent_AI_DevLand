@@ -388,14 +388,14 @@ TYPING_SETTLE_MAX_SECONDS = 60.0
 _channel_typing: dict[int, float] = {}
 
 # Model bindings
-# Default chat runs Sonnet 4.5 with 1M context + Max effort + extended thinking.
-MODEL_CHAT_DEFAULT = "claude-sonnet-4-5"
-MODEL_PASSIVE = "claude-sonnet-4-6"
-MODEL_SUBAGENT = "claude-sonnet-4-5"
+# Default chat runs Opus 4.7 with 1M context + Max effort + extended thinking.
+MODEL_CHAT_DEFAULT = "claude-opus-4-7"
+MODEL_PASSIVE = "claude-opus-4-7"
+MODEL_SUBAGENT = "claude-opus-4-7"
 CHAT_BETAS = ["context-1m-2025-08-07"]
 CHAT_EFFORT = "max"
 ALLOWED_MODEL_ALIASES = {
-    "sonnet": "claude-sonnet-4-5",
+    "sonnet": "claude-opus-4-7",
     "sonnet46": "claude-sonnet-4-6",
     "opus": "claude-opus-4-7",
     "haiku": "claude-haiku-4-5-20251001",
@@ -1146,6 +1146,11 @@ async def call_claude(session_key: str, kestrel_user: str, sdk_prompt: str, mode
         model=model,
         betas=list(CHAT_BETAS),
         effort=CHAT_EFFORT,
+        system_prompt={
+            "type": "preset",
+            "preset": "claude_code",
+            "exclude_dynamic_sections": True,
+        },
     )
 
     parts = []
@@ -1435,6 +1440,11 @@ async def _passive_engage_flow(msg: discord.Message, channel_role: str = "home")
                 model=MODEL_PASSIVE,
                 betas=list(CHAT_BETAS),
                 effort=CHAT_EFFORT,
+                system_prompt={
+                    "type": "preset",
+                    "preset": "claude_code",
+                    "exclude_dynamic_sections": True,
+                },
             )
             sticky_block = ""
             if WORLDBOOK is not None:
